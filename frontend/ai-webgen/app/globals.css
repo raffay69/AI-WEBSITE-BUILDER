@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import '@fontsource/vt323';
+
+
+:root {
+  --background: 0 0 0;
+  --foreground: 255 255 255;
+}
+
+.dark {
+  --background: 0 0 0;
+  --foreground: 255 255 255;
+}
+
+body {
+  color: rgb(var(--foreground));
+  background: rgb(var(--background));
+}
+
+.input-glow:focus {
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+@layer components {
+  .scrollbar-thin {
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: #7f1d1d #000000; /* Firefox */
+  }
+  .scrollbar-thumb-red-600 {
+    scrollbar-color: #7f1d1d #000000;
+  }
+  .scrollbar-track-black {
+    scrollbar-color:#7f1d1d #000000;
+  }
+}
