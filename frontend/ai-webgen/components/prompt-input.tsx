@@ -21,7 +21,7 @@ export function PromptInput() {
         const requestData = { Prompt: prompt.trim() }
 
         // Send POST request to the backend on a different server
-        const response = await fetch('http://localhost:3001/generate', {
+        const response = await fetch('https://ai-webgen-backend.onrender.com/generate', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

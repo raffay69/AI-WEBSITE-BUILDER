@@ -126,7 +126,7 @@ export default function EditorPage() {
 
     const fetchBackendData = async () => {
       try {
-        const response = await fetch('http://localhost:3001/prompt-from-backend');
+        const response = await fetch('https://ai-webgen-backend.onrender.com/prompt-from-backend');
         const data = await response.json();
 
         if (data?.forFrontend) {
@@ -197,7 +197,7 @@ export default function EditorPage() {
     }
     setPrompt('');
     const requestData = { Prompt: prompt.trim() }
-    const response = await fetch('http://localhost:3001/modify', {
+    const response = await fetch('https://ai-webgen-backend.onrender.com/modify', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -232,7 +232,7 @@ export default function EditorPage() {
 
     const fetchModBackendData = async () => {
       try {
-        const response = await fetch('http://localhost:3001/modPrompt-from-backend');
+        const response = await fetch('https://ai-webgen-backend.onrender.com/modPrompt-from-backend');
         const data = await response.json();
 
         if (data?.modifyFrontend) {
