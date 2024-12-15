@@ -35,6 +35,7 @@ app.post('/generate', async (req, res) => {
   }
   // After receiving the prompt, run the logic that needs to be executed
   try {
+    res.json(`prompt received ${genReq}`);
     await generateContent(genReq);
       // Call the function to generate content
   } catch (error) {
