@@ -20,7 +20,7 @@ export default function EditorPage() {
   const [followUp, setFollowUp] = useState('');
   const [showDownloadPopup, setShowDownloadPopup] = useState(false);
   const [progressValue, setProgressValue] = useState(0);
-  const searchParams = useSearchParams();
+  // const searchParams = useSearchParams();
   const [projectName, setProjectName] = useState('');
   const [labelContent, setLabelContent] = useState("Setting things up...");
   const [prompt, setPrompt] = useState('')
