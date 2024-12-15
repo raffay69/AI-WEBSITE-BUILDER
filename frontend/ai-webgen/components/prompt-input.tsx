@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable  @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useState } from 'react'
@@ -37,7 +39,7 @@ export function PromptInput() {
         setResponse(data)  // Handle the response from API
 
         console.log('Response from API:', data)
-      } catch (error) {
+      } catch (error:any) {
         setError(error.message)
         console.error('Error:', error)
       } finally {
