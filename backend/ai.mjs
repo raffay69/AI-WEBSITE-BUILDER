@@ -23,8 +23,6 @@ const genAI = new GoogleGenerativeAI(process.env.api_key);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", systemInstruction: sysPrompt });
 let previousResponse = null;
 let userPreviousResponse = "";
-let forFrontend;
-let modifyFrontend;
 
 let genReq = ""
 app.post('/generate', async (req, res) => {
@@ -46,6 +44,7 @@ app.post('/generate', async (req, res) => {
 });
 
 async function generateContent(genReq){
+let forFrontend;
 const prompt = {
   contents: [
     {
@@ -173,6 +172,7 @@ app.post('/modify', async (req, res) => {
 
 
 async function modifyContent(modReq){
+  let modifyFrontend;
   const prompt = {
     contents: [
       {
