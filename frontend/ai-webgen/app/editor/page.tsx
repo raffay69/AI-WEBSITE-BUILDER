@@ -14,10 +14,10 @@ import { SquareTerminal } from 'lucide-react';
 import { useProjectDownloader } from '@/hook/useProjectDownloader';
 import { useProject } from '../projectContext';
 import axios from 'axios';
-import { assert } from 'console';
 
 
-export default function EditorPage() {
+
+function Editor() {
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(true);  
   const [showDownloadPopup, setShowDownloadPopup] = useState(false);
@@ -50,7 +50,7 @@ export default function EditorPage() {
           Prompt: encodedPrompt.trim(),
         };
 
-        const response = await axios.post('http://localhost:3001/generate', requestData);
+        const response = await axios.post('https://ai-webgen-backend.onrender.com/generate', requestData);
         const data = response.data;
         
 
@@ -281,7 +281,7 @@ export default function EditorPage() {
     setCode("");
     const fetchModBackendData = async () => {
         try {
-          const response = await axios.post('http://localhost:3001/modify', requestData );
+          const response = await axios.post('https://ai-webgen-backend.onrender.com/modify', requestData );
           const data = response.data;
           
           if (data?.modifyFrontend) {
@@ -693,4 +693,11 @@ export default function EditorPage() {
   );
 }
 
+export default function EditorPage() {
+  return (
+    <React.Suspense fallback={<div>Loading......</div>}>
+      <Editor />
+    </React.Suspense>
+  );
+}
 

@@ -135,7 +135,7 @@ try {
 
 if (!projectData || !Array.isArray(projectData.actions)) {
   console.error('Invalid project structure:', projectData);
-  process.exit(1); // Exit if project data is incomplete or malformed
+  // process.exit(1); // Exit if project data is incomplete or malformed
 }
 
 // Log file names and their content, and handle commands
