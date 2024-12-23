@@ -20,21 +20,25 @@ app.use(bodyParser.json());
 
 
 const genAI = new GoogleGenerativeAI(process.env.api_key);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", systemInstruction: sysPrompt });
-let previousResponse = null;
-let userPreviousResponse = "";
+const model = genAI.getGenerativeModel({ 
+  model: "gemini-2.0-flash-exp", 
+  systemInstruction: sysPrompt, 
+  });
+// let previousResponse = null;
+// let userPreviousResponse = "";
 
-let genReq = ""
+
 app.post('/generate', async (req, res) => {
   const { Prompt } = req.body;
-  genReq = Prompt;  // Update genReq with the user input
+
   if (!Prompt) {
     return res.status(400).send({ error: 'User prompt is required.' });
   }
   // After receiving the prompt, run the logic that needs to be executed
   try {
-    res.json(`prompt received ${genReq}`);
-    await generateContent(genReq);
+    // res.json(`prompt received ${genReq}`);
+    const forFrontend = await generateContent(Prompt);
+    res.json({forFrontend});
       // Call the function to generate content
   } catch (error) {
     if (!res.headersSent) {
@@ -44,7 +48,7 @@ app.post('/generate', async (req, res) => {
 });
 
 async function generateContent(genReq){
-let forFrontend;
+// let forFrontend;
 const prompt = {
   contents: [
     {
@@ -75,43 +79,59 @@ const prompt = {
           text: enriching8
         },
         {
-          text: genReq //user prompt
+          text: genReq  //user prompt
         }
       ]
     }
   ]
 };
 
-userPreviousResponse+=genReq;
-const result = await model.generateContentStream(prompt);
+// userPreviousResponse+=genReq;
+const result = await model.generateContent(prompt);
+// console.log(result.response.candidates[0].content.parts[1].text);
+console.log(result.response.text())
 
 // Print text as it comes in.
-let fullResponse = '';
-for await (const chunk of result.stream) {
-  const chunkText = chunk.text();
-  fullResponse += chunkText; 
-  process.stdout.write(chunkText);
-}
+// let fullResponse = result.response.candidates[0].content.parts[1].text;
+let fullResponse = result.response.text();
+// for await (const chunk of result.stream) {
+//   const chunkText = chunk.text();
+//   fullResponse += chunkText; 
+//   process.stdout.write(chunkText);
+// }
+
 let cleanedResponse = fullResponse
+  // .substring(fullResponse.indexOf("```json") + 7)
   .replace(/```json/g, '') // Remove opening code block identifiers
   .replace(/```/g, '')     // Remove closing backticks for code block
   .trim();                 // Trim any leading/trailing spaces
 
 // Remove leading and trailing backticks from the 'content' field
-cleanedResponse = cleanedResponse.replace(/"content":\s*`(.*?)`/g, (match, content) => {
-  return `"content": ${JSON.stringify(content.trim())}`;
+cleanedResponse = cleanedResponse.replace(/"content":\s*`([^`]*)`/g, (match, content) => {
+  return `"content": ${JSON.stringify(content.trim())}`; // Ensure valid JSON strings
 });
 
 // Clean up the string to remove control characters (like newlines, tabs, etc.)
 cleanedResponse = cleanedResponse.replace(/[\x00-\x1F\x7F]/g, ''); // Remove control characters
-previousResponse=cleanedResponse;
+// previousResponse=cleanedResponse;
 let projectData;
 try {
   projectData = JSON.parse(cleanedResponse);
 } catch (error) {
   console.error('Error parsing the AI response:', error);
-  process.exit(1); // Exit if parsing fails
-}
+  // process.exit(1); // Exit if parsing fails
+  // if (error instanceof SyntaxError) {
+  //   const position = error.message.match(/at position (\d+)/);
+  //   if (position) {
+  //       const errorPosition = parseInt(position[1], 10);
+  //       const errorSnippet = cleanedResponse.slice(errorPosition - 150, errorPosition + 150); // Get 50 characters before and after the error position
+  //       console.error("JSON parsing error at position:", errorPosition);
+  //       console.error("Error snippet:", errorSnippet);
+  //     }
+  //   }
+  //   const fixedString = cleanedResponse.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+  //   return projectData = JSON.parse(fixedString);
+  }
 
 if (!projectData || !Array.isArray(projectData.actions)) {
   console.error('Invalid project structure:', projectData);
@@ -142,27 +162,25 @@ const logActions = () => {
 };
 
 // Process the actions
-forFrontend =  logActions();
-console.log(logActions());
+// forFrontend =  logActions();
+// console.log(logActions());
+return logActions();
 
-
-app.get('/prompt-from-backend', (req, res) => {
-  res.json({ forFrontend }); // Send the variable as JSON
-});
+// app.get('/prompt-from-backend', (req, res) => {
+//   res.json({ forFrontend }); // Send the variable as JSON
+// });
 }
 
-let modReq = ""
 app.post('/modify', async (req, res) => {
-  const { Prompt } = req.body;
-  modReq = Prompt;  // Update genReq with the user input
+  const { Prompt , prevRes } = req.body;
   if (!Prompt) {
     return res.status(400).send({ error: 'User prompt is required.' });
   }
   // After receiving the prompt, run the logic that needs to be executed
   try {
-    res.json({"content-received": modReq});
-    await modifyContent(modReq);
-      // Call the function to generate content
+    // res.json({"content-received": modReq});
+   const modifyFrontend =  await modifyContent(Prompt , prevRes);
+    res.json({modifyFrontend}); 
   } catch (error) {
     if (!res.headersSent) {
       res.status(500).send({ error: 'Error generating content' });
@@ -171,8 +189,8 @@ app.post('/modify', async (req, res) => {
 });
 
 
-async function modifyContent(modReq){
-  let modifyFrontend;
+async function modifyContent(modReq , previousResponse){
+  
   const prompt = {
     contents: [
       {
@@ -180,7 +198,7 @@ async function modifyContent(modReq){
         parts: [
           {
             text: enriching1 
-           },        
+          },        
           {
             text: enriching2
           },
@@ -203,15 +221,25 @@ async function modifyContent(modReq){
             text: enriching8
           },
           {
-            text: `Here's the current project state:\n${previousResponse}\n ALL the previous user responses ${userPreviousResponse}  \nYour task: ${modReq} !!!!!ULTRA IMPORTANT -> do not change the projectName , give new prompt using the same projectName!!!!!!
-            !!!ULTRA IMPORTANT -> after making the appropriate changes give the entire project again with all the files in the same order`
+            text: `Here's the current project state:\n${previousResponse}\n\nYour task: ${modReq} !!!!!ULTRA IMPORTANT -> do not change the projectName , give new prompt using the same projectName!!!!!!
+            !!!<ULTRA IMPORTANT> -> after making the appropriate changes give all the files except these
+            - **eslint.config.js**
+            - **package-lock.json**
+            - **postcss.config.js**
+            - **tailwind.config.js**
+            - **tsconfig.app.json**
+            - **tsconfig.json**
+            - **tsconfig.node.json**
+            - **vite.config.ts** 
+            !!!!! give these files only if they were modifed , if not modified then dont give them in the response!!!!!!!
+             </ULTRA IMPORTANT> !!!!!!!!!!!!!`
           }
         ]
       }
     ]
   };
   
-  userPreviousResponse+=modReq;
+  // userPreviousResponse+=modReq;
   const result = await model.generateContentStream(prompt);
   
   // Print text as it comes in.
@@ -233,18 +261,18 @@ async function modifyContent(modReq){
   
   // Clean up the string to remove control characters (like newlines, tabs, etc.)
   cleanedResponse = cleanedResponse.replace(/[\x00-\x1F\x7F]/g, ''); // Remove control characters
-  previousResponse = cleanedResponse;
+  // previousResponse = cleanedResponse;
   let projectData;
   try {
     projectData = JSON.parse(cleanedResponse);
   } catch (error) {
     console.error('Error parsing the AI response:', error);
-    process.exit(1); // Exit if parsing fails
+    // process.exit(1); // Exit if parsing fails
   }
   
   if (!projectData || !Array.isArray(projectData.actions)) {
     console.error('Invalid project structure:', projectData);
-    process.exit(1); // Exit if project data is incomplete or malformed
+    // process.exit(1); // Exit if project data is incomplete or malformed
   }
   
   // Log file names and their content, and handle commands
@@ -270,11 +298,11 @@ async function modifyContent(modReq){
     return result;
   };
   // Process the actions
-modifyFrontend =  logActions();
-console.log(logActions());
+// modifyFrontend =  logActions();
+// console.log(logActions());
 
-
-app.get('/modPrompt-from-backend', (req, res) => {
-  res.json({ modifyFrontend }); // Send the variable as JSON
-});
+return logActions();
+// app.get('/modPrompt-from-backend', (req, res) => {
+//   res.json({ modifyFrontend }); // Send the variable as JSON
+// });
 }

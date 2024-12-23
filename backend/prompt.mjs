@@ -327,6 +327,42 @@ export const enriching2 = `IMPORTANT: Please do not use backticks (\`) in your r
                     "command": "npm install"
                   }
                 ]
+              -When responding with a package.json file, strictly adhere to the following rules:
+                  1. **JSON Compliance**:
+                    - Use double quotes ("") around all property names and string values.
+                    - Do not add trailing commas (,) at the end of objects or arrays.
+                    - Ensure every opening brace ({) or bracket ([) has a matching closing brace (}) or bracket (]).
+
+                  2. **Structure Example**:
+                    {
+                      "dependencies": {
+                        "react": "^18.3.1",
+                        "react-dom": "^18.3.1"
+                      },
+                      "devDependencies": {
+                        "@eslint/js": "^9.9.1",
+                        "@types/react": "^18.3.5",
+                        "@typescript-eslint/eslint-plugin": "^7.5.0"
+                      }
+                    }
+
+                  3. **Validation**:
+                    - Before providing the JSON response, validate it for syntax correctness.
+                    - Ensure that the structure follows valid JSON syntax with no missing or extra characters.
+                    - If there is an error in the JSON format, rewrite it until it passes validation.
+
+                  4. **Response**:
+                    - Respond with only the JSON object. Do not include explanations, comments, or additional text outside the JSON.
+
+                  5. **Error Example**:
+                    If an error like the following occurs:
+                    - SyntaxError: Expected ',' or '}' after property value in JSON at position 563
+                    Ensure you double-check:
+                    - Proper use of double quotes.
+                    - Closing all braces and brackets.
+                    - No trailing commas.
+
+                  Follow these instructions to ensure the response is error-free and valid JSON.
               }`
 
 export const enriching3 =  `!!!ULTRA IMPORTANT ->Project Files:\n\nProvide all necessary files and configurations, including:\n\n- A fully functional package.json file with all dependencies and devDependencies.

@@ -20,25 +20,25 @@ export function PromptInput() {
         const encodedPrompt = encodeURIComponent(prompt.trim())
         router.push(`/editor?prompt=${encodedPrompt}`)
         // Prepare the request body
-        const requestData = { Prompt: prompt.trim() }
+        // const requestData = { Prompt: prompt.trim() }
 
-        // Send POST request to the backend on a different server
-        const response = await fetch('https://ai-webgen-backend.onrender.com/generate', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(requestData),
-        })
+   
+        // const response = await fetch('http://localhost:3001/generate', {
+        //   method: 'POST',
+        //   headers: {
+        //     'Content-Type': 'application/json',
+        //   },
+        //   body: JSON.stringify(requestData),
+        // })        
 
 
-        if (!response.ok) {
-          throw new Error('Failed to send request to API')
-        }
-        const data = await response.json()
-        setResponse(data)  // Handle the response from API
+        // if (!response.ok) {
+        //   throw new Error('Failed to send request to API')
+        // }
+        // const data = await response.json()
+        // setResponse(data)  // Handle the response from API
 
-        console.log('Response from API:', data)
+        // console.log('Response from API:', data)
       } catch (error:any) {
         setError(error.message)
         console.error('Error:', error)

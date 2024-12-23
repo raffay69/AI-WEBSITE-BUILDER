@@ -5,7 +5,7 @@
 import * as React from 'react';
 import { Progress } from '@nextui-org/react';
 import { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';  
 import { Logo } from '@/components/logo';
 import { Dice1, Download, Sheet } from 'lucide-react';
 import { DownloadPopup } from '@/components/download-popup';
@@ -13,16 +13,14 @@ import { useWebContainer } from '@/hook/useWebContainer';
 import { SquareTerminal } from 'lucide-react';
 import { useProjectDownloader } from '@/hook/useProjectDownloader';
 import { useProject } from '../projectContext';
+import axios from 'axios';
+import { assert } from 'console';
+
 
 export default function EditorPage() {
   const [code, setCode] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [followUp, setFollowUp] = useState('');
+  const [isLoading, setIsLoading] = useState(true);  
   const [showDownloadPopup, setShowDownloadPopup] = useState(false);
-  const [progressValue, setProgressValue] = useState(0);
-  // const searchParams = useSearchParams();
-  const [projectName, setProjectName] = useState('');
-  const [labelContent, setLabelContent] = useState("Setting things up...");
   const [prompt, setPrompt] = useState('')
   const textAreaRef = useRef<HTMLTextAreaElement>(null);  
   const webcontainer = useWebContainer();
@@ -37,7 +35,84 @@ export default function EditorPage() {
   const terminalRef = useRef<HTMLDivElement>(null);
   const { downloadCurrentProject } = useProjectDownloader();
   const { setDownloadTitle } = useProject();
-  
+  const searchParams = useSearchParams(); 
+  const [prevRes , setPrevRes] = useState('');
+
+  useEffect(() => {
+    const encodedPrompt = searchParams?.get('prompt'); // Replace `searchParams` with your actual search param logic.
+
+    if (!encodedPrompt) return;
+
+    const fetchBackendData = async () => {
+      try {
+        setIsLoading(true);
+        const requestData = {
+          Prompt: encodedPrompt.trim(),
+        };
+
+        const response = await axios.post('http://localhost:3001/generate', requestData);
+        const data = response.data;
+        
+
+        if (data?.forFrontend) {
+          const projectTitle = data.forFrontend[0]?.projectName || 'Unnamed Project';
+          setDownloadTitle(projectTitle);
+
+          const filesContent = data.forFrontend
+            .filter((item: { fileName: any; content: any; }) => item.fileName && item.content)
+            .map((item: { fileName: any; content: any; }) => `File: ${item.fileName}\n\n${item.content}`)
+            .join('\n\n');
+
+          const shellCommands = data.forFrontend
+            .filter((item: { command: any; }) => item.command)
+            .map((item: { command: any; }) => `Command: ${item.command}`)
+            .join('\n\n');
+
+            const combinedContent = `Project Name: ${projectTitle}\n\n${filesContent}\n\n`;
+            setCode(combinedContent);
+            setCompleteCode(combinedContent);
+            setPrevRes(combinedContent);
+            
+
+          // const streamContent =(projectTitle: any, filesContent: any, shellCommands: any) => {
+          //   const combinedContent = `Project Name: ${projectTitle}\n\n${filesContent}\n\n`;
+          //   setCompleteCode(combinedContent);
+          //   let currentContent = '';
+          //   let index = 0;
+          //   // const delay = (ms: number | undefined) => new Promise((resolve) => setTimeout(resolve, ms));
+
+
+          //   const interval = setInterval(async() => {
+          //     if (index < combinedContent.length) {
+          //       currentContent += combinedContent[index]; // Append next character
+          //       setCode(currentContent); // Update the state
+          //       index++;
+
+          //       // await delay(1);
+
+          //       // if (textAreaRef.current) {
+          //       //   textAreaRef.current.scrollTop = textAreaRef.current.scrollHeight; // Pin to bottom        
+          //       // }
+          //     } else {
+          //       clearInterval(interval); // Clear interval once content is streamed
+          //     }
+          //   }, 1);
+          // };
+
+          // streamContent(projectTitle, filesContent, shellCommands);
+        } else {
+          setCode('No valid data received from the backend.');
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setCode('Failed to fetch data from the backend.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBackendData();
+  }, []);
   
 
   const toggleTerminal = () => setShowTerminal((prev) => !prev);
@@ -100,193 +175,250 @@ export default function EditorPage() {
 
 
 
-  const simulateProgress = () => {
-    let progress = 0;
-    const interval = setInterval(() => {
-      if (progress < 100) {
-        progress += 1;
-        setProgressValue(Math.min(progress, 100));
-        if (progress < 30) {
-          setLabelContent("Setting things up...");
-        } else if (progress < 70) {
-          setLabelContent("Working on it...");
-        } else if (progress < 90) {
-          setLabelContent("Final touches...");
-        } else {
-          setLabelContent("All done! Ready to go!");
-        }        
-      } else {
-        clearInterval(interval);
-      }
-    }, 450);
+  // const simulateProgress = () => {
+  //   let progress = 0;
+  //   const interval = setInterval(() => {
+  //     if (progress < 100) {
+  //       progress += 1;
+  //       setProgressValue(Math.min(progress, 100));
+  //       if (progress < 30) {
+  //         setLabelContent("Setting things up...");
+  //       } else if (progress < 70) {
+  //         setLabelContent("Working on it...");
+  //       } else if (progress < 90) {
+  //         setLabelContent("Final touches...");
+  //       } else {
+  //         setLabelContent("All done! Ready to go!");
+  //       }        
+  //     } else {
+  //       clearInterval(interval);
+  //     }
+  //   }, 450);
 
-    return interval;
-  };
+  //   return interval;
+  // };
 
-  useEffect(() => {
-    const progressInterval = simulateProgress();
+  // useEffect(() => {
+  //   const progressInterval = simulateProgress();
 
-    const fetchBackendData = async () => {
-      try {
-        const response = await fetch('https://ai-webgen-backend.onrender.com/prompt-from-backend');
-        const data = await response.json();
+  //   const fetchBackendData = async () => {
+  //     try {
+  //       const response = await fetch('http://localhost:3001/prompt-from-backend');
+  //       const data = await response.json();
 
-        if (data?.forFrontend) {
-          const projectTitle = data.forFrontend[0]?.projectName || 'Unnamed Project';
-          setDownloadTitle(projectTitle);
-          const filesContent = data.forFrontend
-            .filter((item: { fileName: any; content: any }) => item.fileName && item.content)
-            .map((item: { fileName: any; content: any }) => `File: ${item.fileName}\n\n${item.content}`)
-            .join('\n\n');
+  //       if (data?.forFrontend) {
+  //         const projectTitle = data.forFrontend[0]?.projectName || 'Unnamed Project';
+  //         setDownloadTitle(projectTitle);
+  //         const filesContent = data.forFrontend
+  //           .filter((item: { fileName: any; content: any }) => item.fileName && item.content)
+  //           .map((item: { fileName: any; content: any }) => `File: ${item.fileName}\n\n${item.content}`)
+  //           .join('\n\n');
 
-          const shellCommands = data.forFrontend
-            .filter((item: { command: any }) => item.command)
-            .map((item: { command: any }) => `Command: ${item.command}`)
-            .join('\n\n');
+  //         const shellCommands = data.forFrontend
+  //           .filter((item: { command: any }) => item.command)
+  //           .map((item: { command: any }) => `Command: ${item.command}`)
+  //           .join('\n\n');
 
-          // const combinedContent = `Project Name: ${projectTitle}\n\n${filesContent}\n\n${shellCommands}`;
-          const streamContent = (projectTitle: any, filesContent: any, shellCommands: any) => {  
-            const combinedContent = `Project Name: ${projectTitle}\n\n${filesContent}\n\n`;
-            setCompleteCode(combinedContent);
-            let currentContent = ""; // Tracks the streamed content
-            let index = 0;
-            const interval = setInterval(() => {
-              if (index < combinedContent.length) {
-                currentContent += combinedContent[index]; // Append the next character
-                setCode(currentContent); // Update the state with partial content
-                index++;
-                if (textAreaRef.current) {
-                  textAreaRef.current.scrollTop = textAreaRef.current.scrollHeight;
-                }        
-              } else {
-                clearInterval(interval); // Clear the interval once complete
-              }
-            }, 1);
-          };
-          streamContent(projectTitle,filesContent,shellCommands);
-          // setCode(combinedContent);
-          // setProjectName(projectTitle);
-        } else {
-          setCode('No valid data received from the backend.');
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        setCode('Failed to fetch data from the backend.');
-      } finally {
-        setIsLoading(false);
-        clearInterval(progressInterval);
-        setProgressValue(100);
-      }
-    };
+  //         // const combinedContent = `Project Name: ${projectTitle}\n\n${filesContent}\n\n${shellCommands}`;
+  //         const streamContent = (projectTitle: any, filesContent: any, shellCommands: any) => {  
+  //           const combinedContent = `Project Name: ${projectTitle}\n\n${filesContent}\n\n`;
+  //           setCompleteCode(combinedContent);
+  //           let currentContent = ""; // Tracks the streamed content
+  //           let index = 0;
+  //           const interval = setInterval(() => {
+  //             if (index < combinedContent.length) {
+  //               currentContent += combinedContent[index]; // Append the next character
+  //               setCode(currentContent); // Update the state with partial content
+  //               index++;
+  //               if (textAreaRef.current) {
+  //                 textAreaRef.current.scrollTop = textAreaRef.current.scrollHeight;
+  //               }        
+  //             } else {
+  //               clearInterval(interval); // Clear the interval once complete
+  //             }
+  //           }, 1);
+  //         };
+  //         streamContent(projectTitle,filesContent,shellCommands);
+  //         // setCode(combinedContent);
+  //         // setProjectName(projectTitle);
+  //       } else {
+  //         setCode('No valid data received from the backend.');
+  //       }
+  //     } catch (error) {
+  //       console.error('Error fetching data:', error);
+  //       setCode('Failed to fetch data from the backend.');
+  //     } finally {
+  //       setIsLoading(false);
+  //       clearInterval(progressInterval);
+  //       setProgressValue(100);
+  //     }
+  //   };
 
-    const timer = setTimeout(() => {
-      fetchBackendData();
-    }, 47000);
+  //   const timer = setTimeout(() => {
+  //     fetchBackendData();
+  //   }, 47000);
 
-    return () => {
-      clearTimeout(timer);
-      clearInterval(progressInterval);
-      setCode('');
-      setProjectName('');
-      setProgressValue(0);
+  //   return () => {
+  //     clearTimeout(timer);
+  //     clearInterval(progressInterval);
+  //     setCode('');
+  //     setProjectName('');
+  //     setProgressValue(0);
       
-    };
-  }, []);
+  //   };
+  // }, []);
 
   const handleFollowUpSubmit = async () => {
     if(!prompt.trim()){
       return;
     }
+    const requestData = { 
+      Prompt: prompt.trim(),
+      prevRes: prevRes
+    }
     setPrompt('');
-    const requestData = { Prompt: prompt.trim() }
-    const response = await fetch('https://ai-webgen-backend.onrender.com/modify', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestData),
-    })
-
-    console.log('Follow-up question:', followUp);
-    setFollowUp('');
-    setProgressValue(0); // Reset progress
     setIsLoading(true); // Show progress bar
     setCode("");
-    let progress = 0;
-    const followUpProgress = setInterval(() => {
-      if (progress < 100) {
-        progress += 1;
-        setProgressValue(Math.min(progress, 100));
-        if (progress < 30) {
-          setLabelContent('Setting things up...');
-        } else if (progress < 70) {
-          setLabelContent('Making changes...');
-        } else if (progress < 90) {
-          setLabelContent('Modifying your code...');
-        } 
-        }
-        else{
-        setLabelContent('All done! Ready to go!');
-        clearInterval(followUpProgress);
-        setIsLoading(false); // Hide progress bar
-      }
-    }, 450);
-
     const fetchModBackendData = async () => {
-      try {
-        const response = await fetch('https://ai-webgen-backend.onrender.com/modPrompt-from-backend');
-        const data = await response.json();
+        try {
+          const response = await axios.post('http://localhost:3001/modify', requestData );
+          const data = response.data;
+          
+          if (data?.modifyFrontend) {
+            const projectTitle = data.modifyFrontend[0]?.projectName || 'Unnamed Project';
+            setDownloadTitle(projectTitle);
+  
+            const filesContent = data.modifyFrontend
+              .filter((item: { fileName: any; content: any }) => item.fileName && item.content)
+              .map((item: { fileName: any; content: any }) => `File: ${item.fileName}\n\n${item.content}`)
+              .join('\n\n');
+  
+            // const shellCommands = data.modifyFrontend
+            //   .filter((item: { command: any }) => item.command)
+            //   .map((item: { command: any }) => `Command: ${item.command}`)
+            //   .join('\n\n');
+            
+              const combinedContent = `Project Name: ${projectTitle}\n\n${filesContent}\n\n`;
+              setCompleteCode(combinedContent);
+              setCode(combinedContent);
+              setPrevRes(combinedContent);
+              
 
-        if (data?.modifyFrontend) {
-          const projectTitle = data.modifyFrontend[0]?.projectName || 'Unnamed Project';
-          setDownloadTitle(projectTitle);
 
-          const filesContent = data.modifyFrontend
-            .filter((item: { fileName: any; content: any }) => item.fileName && item.content)
-            .map((item: { fileName: any; content: any }) => `File: ${item.fileName}\n\n${item.content}`)
-            .join('\n\n');
 
-          const shellCommands = data.modifyFrontend
-            .filter((item: { command: any }) => item.command)
-            .map((item: { command: any }) => `Command: ${item.command}`)
-            .join('\n\n');
-
-          const streamContent = (projectTitle: any, filesContent: any, shellCommands: any) => {  
-          const combinedContent = `Project Name: ${projectTitle}\n\n${filesContent}\n\n`;
-          setCompleteCode(combinedContent);
-          let currentContent = ""; // Tracks the streamed content
-          let index = 0;
-          const interval = setInterval(() => {
-            if (index < combinedContent.length) {
-              currentContent += combinedContent[index]; // Append the next character
-              setCode(currentContent); // Update the state with partial content
-              index++;
-              if (textAreaRef.current) {
-                textAreaRef.current.scrollTop = textAreaRef.current.scrollHeight;
-              } 
-            } else {
-              clearInterval(interval); // Clear the interval once complete
-            }
-          }, 1);
-        };
-        streamContent(projectTitle,filesContent,shellCommands);
-          // setCode(combinedContent);
-          // setProjectName(projectTitle);
-        } else {
-          setCode('No valid data received from the backend.');
+          //   const streamContent = (projectTitle: any, filesContent: any, shellCommands: any) => {  
+          //   const combinedContent = `Project Name: ${projectTitle}\n\n${filesContent}\n\n`;
+          //   setCompleteCode(combinedContent);
+          //   let currentContent = ""; // Tracks the streamed content
+          //   let index = 0;
+          //   const interval = setInterval(() => {
+          //     if (index < combinedContent.length) {
+          //       currentContent += combinedContent[index]; // Append the next character
+          //       setCode(currentContent); // Update the state with partial content
+          //       index++;
+          //       if (textAreaRef.current) {
+          //         textAreaRef.current.scrollTop = textAreaRef.current.scrollHeight;
+          //       } 
+          //     } else {
+          //       clearInterval(interval); // Clear the interval once complete
+          //     }
+          //   }, 1);
+          // };
+          // streamContent(projectTitle,filesContent,shellCommands);
+            // setCode(combinedContent);
+            // setProjectName(projectTitle);
+          } else {
+            setCode('No valid data received from the backend.');
+          }
+        } catch (error) {
+          console.error('Error fetching data:', error);
+          setCode('Failed to fetch data from the backend.');
+        } finally {
+          setIsLoading(false);
         }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        setCode('Failed to fetch data from the backend.');
-      } finally {
-        setIsLoading(false);
-      }
+      };
+      fetchModBackendData();
     };
 
-    setTimeout(() => {
-      fetchModBackendData();
-    }, 47000);
-  };
+
+
+
+    // let progress = 0;
+    // const followUpProgress = setInterval(() => {
+    //   if (progress < 100) {
+    //     progress += 1;
+    //     setProgressValue(Math.min(progress, 100));
+    //     if (progress < 30) {
+    //       setLabelContent('Setting things up...');
+    //     } else if (progress < 70) {
+    //       setLabelContent('Making changes...');
+    //     } else if (progress < 90) {
+    //       setLabelContent('Modifying your code...');
+    //     } 
+    //     }
+    //     else{
+    //     setLabelContent('All done! Ready to go!');
+    //     clearInterval(followUpProgress);
+    //     setIsLoading(false); // Hide progress bar
+    //   }
+    // }, 450);
+
+    // const fetchModBackendData = async () => {
+    //   try {
+    //     const response = await fetch('http://localhost:3001/modPrompt-from-backend');
+    //     const data = await response.json();
+
+    //     if (data?.modifyFrontend) {
+    //       const projectTitle = data.modifyFrontend[0]?.projectName || 'Unnamed Project';
+    //       setDownloadTitle(projectTitle);
+
+    //       const filesContent = data.modifyFrontend
+    //         .filter((item: { fileName: any; content: any }) => item.fileName && item.content)
+    //         .map((item: { fileName: any; content: any }) => `File: ${item.fileName}\n\n${item.content}`)
+    //         .join('\n\n');
+
+    //       const shellCommands = data.modifyFrontend
+    //         .filter((item: { command: any }) => item.command)
+    //         .map((item: { command: any }) => `Command: ${item.command}`)
+    //         .join('\n\n');
+
+    //       const streamContent = (projectTitle: any, filesContent: any, shellCommands: any) => {  
+    //       const combinedContent = `Project Name: ${projectTitle}\n\n${filesContent}\n\n`;
+    //       setCompleteCode(combinedContent);
+    //       let currentContent = ""; // Tracks the streamed content
+    //       let index = 0;
+    //       const interval = setInterval(() => {
+    //         if (index < combinedContent.length) {
+    //           currentContent += combinedContent[index]; // Append the next character
+    //           setCode(currentContent); // Update the state with partial content
+    //           index++;
+    //           if (textAreaRef.current) {
+    //             textAreaRef.current.scrollTop = textAreaRef.current.scrollHeight;
+    //           } 
+    //         } else {
+    //           clearInterval(interval); // Clear the interval once complete
+    //         }
+    //       }, 1);
+    //     };
+    //     streamContent(projectTitle,filesContent,shellCommands);
+    //       // setCode(combinedContent);
+    //       // setProjectName(projectTitle);
+    //     } else {
+    //       setCode('No valid data received from the backend.');
+    //     }
+    //   } catch (error) {
+    //     console.error('Error fetching data:', error);
+    //     setCode('Failed to fetch data from the backend.');
+    //   } finally {
+    //     setIsLoading(false);
+    //   }
+    // };
+
+    // setTimeout(() => {
+    //   fetchModBackendData();
+    // }, 47000);
+
+  
 
   useEffect(()=>{
     if (isFirstRender.current) {
@@ -433,30 +565,27 @@ export default function EditorPage() {
               ref={textAreaRef}
               className="absolute inset-0 bg-[#111] rounded-lg p-4 text-sm resize-none border border-gray-800 focus:border-gray-700 focus:outline-none input-glow mb-4 scrollbar-thin scrollbar-thumb-red-600 scrollbar-track-black"
               value={code}
-              onChange={(e) => setCode(e.target.value)}
+              // onChange={(e) => setCode(e.target.value)}
             />
             
             {/* Centered Progress Bar with Explicit Styling */}
             {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-              <div className="w-3/4">
-                <Progress 
-                  label={`${labelContent}`}
-                  value={progressValue} 
-                  color="primary" 
-                  showValueLabel={true} 
-                  size="lg" // You can adjust this size, or set it to 'lg' if needed
-                  classNames={{
-                    base: "w-full", 
-                    track: "bg-gray-700 border-none h-1.5",
-                    indicator: "bg-customRed border-none h-1.5",
-                    label: "text-white",
-                    value: "text-white"
-                  }}
-                />
+              <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none bg-black bg-opacity-50">
+                <div className="w-full max-w-md px-4">
+                  <Progress 
+                    isIndeterminate 
+                    aria-label="Loading..." 
+                    size="sm"
+                    className="animate-pulse" 
+                    classNames={{
+                      base: "w-full", 
+                      track: "bg-gray-700 border-none h-1.5",
+                      indicator: "bg-customRed border-none h-1.5 animate-[progress-indeterminate_1.5s_infinite_linear]",
+                    }}
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            )}
           </div>
 
           <div className="h-[20%] flex flex-col">
