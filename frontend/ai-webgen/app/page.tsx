@@ -3,8 +3,9 @@
 
 import { Logo } from '@/components/logo'
 import { PromptInput } from '@/components/prompt-input'
+import { TypewriterEffectSmoothDemo } from '@/components/typewriter';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+
 
 
 export default function Home() {
@@ -28,6 +29,7 @@ export default function Home() {
         </p>
         <div className="w-full max-w-3xl">
           <PromptInput />
+          <TypewriterEffectSmoothDemo/>
         </div>
       </div>
     </main>

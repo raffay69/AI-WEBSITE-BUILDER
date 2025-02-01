@@ -13,6 +13,7 @@
     "@nextui-org/progress": "^2.2.4",
     "@nextui-org/react": "^2.6.7",
     "@radix-ui/react-progress": "^1.1.0",
+    "@radix-ui/react-separator": "^1.1.1",
     "@types/jszip": "^3.4.1",
     "@webcontainer/api": "^1.5.1-internal.3",
     "axios": "^1.7.9",
