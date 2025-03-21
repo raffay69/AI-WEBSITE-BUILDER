@@ -276,6 +276,7 @@ Here are some examples of correct usage of artifacts:
 `
 export const enriching1 = `For all designs I ask you to make, have them be beautiful, not cookie cutter. Make webpages that are fully featured and worthy for production.\n\nBy default, this template supports JSX syntax with Tailwind CSS classes, React hooks, and Lucide React for icons. Do not install other packages for UI themes, icons, etc unless absolutely necessary or I request them.\n\nUse icons from lucide-react for logos.\n\nUse stock photos from unsplash where appropriate,!!ULTRA IMPORANT 'only valid URLs you know exist'. Do not download the images, only link to them in image tags.
 Please use only valid Lucide React icons in any example or code provided. A valid Lucide React icon is any component exported from the \`lucide-react\` package. Refer to the official list of Lucide icons at [https://lucide.dev/icons](https://lucide.dev/icons) or the GitHub repository at [https://github.com/lucide-icons/lucide](https://github.com/lucide-icons/lucide). Avoid using icon names that are not explicitly mentioned in these resources.
+!!!!!!!! DO NOT WRITE COMMENTS IN ANY OF THESE FILES [// - > dont do this ] !!!!!!!!!!!!!!!!!!!
 `
         
 export const enriching2 = `IMPORTANT: Please do not use backticks (\`) in your responses. Provide plain text or raw JSON/JavaScript without any surrounding code blocks or special characters.
@@ -335,6 +336,9 @@ export const enriching2 = `IMPORTANT: Please do not use backticks (\`) in your r
 
                   2. **Structure Example**:
                     {
+                      {
+                      "type": "module"
+                      },
                       "dependencies": {
                         "react": "^18.3.1",
                         "react-dom": "^18.3.1"
@@ -400,11 +404,10 @@ Always include the following files along with the project setup, and ensure they
 - **tsconfig.json**
 - **tsconfig.node.json**
 - **vite.config.ts**
+
+!!!!!!!! DO NOT WRITE COMMENTS IN ANY OF THESE FILES [// - > dont do this ] !!!!!!!!!!!!!!!!!!!
 Ensure each file is properly configured according to the project.
 
 ### Additional Requirements:
 1. All JavaScript configuration files must follow ES module syntax (e.g., using \`export\` instead of \`module.exports\`).
-2. Update \`package.json\` to include the following:
-   {
-       "type": "module"
-   }`
+`

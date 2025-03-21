@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start":"node ai.mjs"
+    "start": "node ai.mjs"
   },
   "keywords": [],
   "author": "",
@@ -17,6 +17,8 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "firebase-admin": "^13.2.0",
+    "openai": "^4.87.3",
     "prompt-sync": "^4.2.0"
   }
 }

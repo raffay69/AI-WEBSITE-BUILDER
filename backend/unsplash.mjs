@@ -1,5 +1,7 @@
+import 'dotenv/config';
+
 export const fetchImage = async (query) => {
-    const ACCESS_KEY = 'DG0IiMw_i1Ng-QIfr8HAQMNrjR-ccYXVFWE5jDr85uY'; // Replace with Unsplash API Key
+    const ACCESS_KEY = process.env.Unsplash_Key; // Replace with Unsplash API Key
     const url = `https://api.unsplash.com/photos/random?query=${query}&client_id=${ACCESS_KEY}`;
     try {
       const response = await fetch(url);
