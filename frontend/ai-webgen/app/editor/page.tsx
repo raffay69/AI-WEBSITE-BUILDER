@@ -5,31 +5,49 @@
 import * as React from 'react';
 import { Progress } from '@nextui-org/react';
 import { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';  
+import { useRouter, useSearchParams } from 'next/navigation';  
 import { Logo } from '@/components/logo';
-import { Dice1, Download, Sheet } from 'lucide-react';
+import { Dice1, Download, FullscreenIcon, RefreshCwIcon, Sheet } from 'lucide-react';
 import { DownloadPopup } from '@/components/download-popup';
 import { useWebContainer } from '@/hook/useWebContainer';
-import { SquareTerminal } from 'lucide-react';
+import { SquareTerminal , FolderOpen } from 'lucide-react';
 import { useProjectDownloader } from '@/hook/useProjectDownloader';
 import { useProject } from '../projectContext';
 import axios from 'axios';
+import { 
+  SandpackProvider, 
+  SandpackLayout, 
+  SandpackCodeEditor, 
+  SandpackFileExplorer,
+  SandpackFile,
+  Sandpack,
+} from "@codesandbox/sandpack-react";
+import {  levelUp  } from "@codesandbox/sandpack-themes";
+import AuthButtons from '@/components/ui/auth-buttons';
+import { useAuth  } from '../auth/authContext';
+import { toast } from 'sonner';
+import { getIdToken } from 'firebase/auth';
+import { addUserContent, auth, getContentByIDPrompt, updateContentByChatId } from '../auth/firebase';
+import { ClaudeSidebar } from '@/components/ui/sidebar';
+import { mergeProjects, parseProjectString, stringifyProject } from './helper';
+
 
 
 
 function Editor() {
+  
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(true);  
   const [showDownloadPopup, setShowDownloadPopup] = useState(false);
   const [prompt, setPrompt] = useState('')
-  const textAreaRef = useRef<HTMLTextAreaElement>(null);  
   const webcontainer = useWebContainer();
   const [completeCode , setCompleteCode] = useState('');
   const isFirstRender = useRef(true);  
   const [url , setUrl] = useState('');
   const [iframeBackground, setIframeBackground] = useState('transparent');
-  const [iframeText , setIframeText] = useState('Click on "SHOW PREVIEW" after the code is generated....');
-  const [iframeLoader , setIframeLoader] = useState('');
+  const [iframeText, setIframeText] = useState(
+    `Click "SHOW PREVIEW" after the code is generated...`
+  );const [iframeLoader , setIframeLoader] = useState('');
   const [showTerminal, setShowTerminal] = useState(false);
   const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -37,82 +55,151 @@ function Editor() {
   const { setDownloadTitle } = useProject();
   const searchParams = useSearchParams(); 
   const [prevRes , setPrevRes] = useState('');
+  const [showFiles, setShowFiles] = useState(true);
+  const [isOpen , setIsOpen] = useState(true)
+  const [data, setData] = useState<{ filename: string |  SandpackFile; content: string | SandpackFile }[]>([]);
+  const [files , setFiles] = useState({})
+  const {userLoggedIn , loading ,getIdToken , currentUser } = useAuth()
+  const router = useRouter()
+  const [isReloded , setIsReloded] = useState(false)
+  const [title , setTitle] = useState("untitled")
+  const [isSideBarOpen , setIsSideBarOpen] = useState(false)
+  
+  
+  useEffect(()=>{
+    if(!loading && !userLoggedIn){
+      toast("please Login first")
+      router.push('/signIn')
+    }
+  },[userLoggedIn, loading, router])
+
 
   useEffect(() => {
-    const encodedPrompt = searchParams?.get('prompt'); // Replace `searchParams` with your actual search param logic.
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasReloaded = urlParams.get('reloaded');
+   
+    if(hasReloaded){
+    setIsReloded(true)
+    }
 
+    if (!hasReloaded) {
+      setIsReloded(false)
+      const timer = setTimeout(() => {
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('reloaded', 'true');
+        window.location.href = newUrl.toString();
+      }, 1000);
+            
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  const myModifiedTheme = {
+    ...levelUp, // Extend the base theme
+    colors: {
+      ...levelUp.colors, // Keep original colors
+      surface1: "#000000",
+      surface3: "#000000", 
+      accent: "red",
+    },
+  };
+
+// eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const encodedPrompt = searchParams?.get('prompt');
+    
     if (!encodedPrompt) return;
+    if (loading) return; 
+    if (!isReloded) return;
+    
+    const chatID = searchParams?.get('chat');
 
-    const fetchBackendData = async () => {
+    const fetchContent = async () => {
+      setIsLoading(true);
+      
       try {
-        setIsLoading(true);
-        const requestData = {
-          Prompt: encodedPrompt.trim(),
-        };
-
-        const response = await axios.post('https://ai-webgen-backend.onrender.com/generate', requestData);
-        const data = response.data;
+        // Check if user is logged in
+        if (!userLoggedIn) {
+          toast.error("Please login first");
+          router.push('/signIn');
+          return;
+        }
         
-
-        if (data?.forFrontend) {
-          const projectTitle = data.forFrontend[0]?.projectName || 'Unnamed Project';
-          setDownloadTitle(projectTitle);
-
-          const filesContent = data.forFrontend
-            .filter((item: { fileName: any; content: any; }) => item.fileName && item.content)
-            .map((item: { fileName: any; content: any; }) => `File: ${item.fileName}\n\n${item.content}`)
-            .join('\n\n');
-
-          const shellCommands = data.forFrontend
-            .filter((item: { command: any; }) => item.command)
-            .map((item: { command: any; }) => `Command: ${item.command}`)
-            .join('\n\n');
-
+        const idToken = await getIdToken();
+        if (!idToken) {
+          toast.error("Authentication failed");
+          router.push('/signIn');
+          return;
+        }
+  
+        // Check for existing content using both prompt and conversationId
+        const existingContent = await getContentByIDPrompt(
+          currentUser?.uid, 
+          encodedPrompt.trim(),
+          chatID!
+        );
+        
+        if (existingContent) {
+          // Content exists in DB, use that
+          console.log('Using existing content from database');
+          setDownloadTitle(existingContent.title);
+          setTitle(existingContent.title);
+          setCode(existingContent.content);
+          setCompleteCode(existingContent.content);
+          setPrevRes(existingContent.content);
+        } else {
+          // Make the API call for new content
+          console.log('Fetching new content from API');
+          const requestData = {
+            Prompt: encodedPrompt.trim(),
+          };
+          
+          const response = await axios.post('https://ai-webgen-backend.onrender.com/generate', requestData, {
+            headers: {
+              Authorization: `Bearer ${idToken}`, 
+            },
+          });
+          
+          const data = response.data;
+          
+          if (data?.forFrontend) {
+            const projectTitle = data.forFrontend[0]?.projectName || 'Unnamed Project';
+            setDownloadTitle(projectTitle);
+            setTitle(projectTitle);
+    
+            const filesContent = data.forFrontend
+              .filter((item: { fileName: any; content: any; }) => item.fileName && item.content)
+              .map((item: { fileName: any; content: any; }) => `File: ${item.fileName}\n\n${item.content}`)
+              .join('\n\n');
+    
             const combinedContent = `Project Name: ${projectTitle}\n\n${filesContent}\n\n`;
             setCode(combinedContent);
             setCompleteCode(combinedContent);
             setPrevRes(combinedContent);
             
 
-          // const streamContent =(projectTitle: any, filesContent: any, shellCommands: any) => {
-          //   const combinedContent = `Project Name: ${projectTitle}\n\n${filesContent}\n\n`;
-          //   setCompleteCode(combinedContent);
-          //   let currentContent = '';
-          //   let index = 0;
-          //   // const delay = (ms: number | undefined) => new Promise((resolve) => setTimeout(resolve, ms));
-
-
-          //   const interval = setInterval(async() => {
-          //     if (index < combinedContent.length) {
-          //       currentContent += combinedContent[index]; // Append next character
-          //       setCode(currentContent); // Update the state
-          //       index++;
-
-          //       // await delay(1);
-
-          //       // if (textAreaRef.current) {
-          //       //   textAreaRef.current.scrollTop = textAreaRef.current.scrollHeight; // Pin to bottom        
-          //       // }
-          //     } else {
-          //       clearInterval(interval); // Clear interval once content is streamed
-          //     }
-          //   }, 1);
-          // };
-
-          // streamContent(projectTitle, filesContent, shellCommands);
-        } else {
-          setCode('No valid data received from the backend.');
+            await addUserContent(
+              currentUser?.uid, 
+              projectTitle, 
+              combinedContent, 
+              encodedPrompt.trim(),
+              chatID!
+            );
+          } else {
+            setCode('No valid data received from the backend.');
+          }
         }
       } catch (error) {
         console.error('Error fetching data:', error);
+        toast("Failed to fetch data from the backend.");
         setCode('Failed to fetch data from the backend.');
       } finally {
         setIsLoading(false);
       }
     };
-
-    fetchBackendData();
-  }, []);
+  
+    fetchContent();
+  }, [searchParams, loading, userLoggedIn, getIdToken, router, isReloded, currentUser?.uid]);
   
 
   const toggleTerminal = () => setShowTerminal((prev) => !prev);
@@ -174,104 +261,12 @@ function Editor() {
   }, [terminalOutput,showTerminal]);
 
 
-
-  // const simulateProgress = () => {
-  //   let progress = 0;
-  //   const interval = setInterval(() => {
-  //     if (progress < 100) {
-  //       progress += 1;
-  //       setProgressValue(Math.min(progress, 100));
-  //       if (progress < 30) {
-  //         setLabelContent("Setting things up...");
-  //       } else if (progress < 70) {
-  //         setLabelContent("Working on it...");
-  //       } else if (progress < 90) {
-  //         setLabelContent("Final touches...");
-  //       } else {
-  //         setLabelContent("All done! Ready to go!");
-  //       }        
-  //     } else {
-  //       clearInterval(interval);
-  //     }
-  //   }, 450);
-
-  //   return interval;
-  // };
-
-  // useEffect(() => {
-  //   const progressInterval = simulateProgress();
-
-  //   const fetchBackendData = async () => {
-  //     try {
-  //       const response = await fetch('http://localhost:3001/prompt-from-backend');
-  //       const data = await response.json();
-
-  //       if (data?.forFrontend) {
-  //         const projectTitle = data.forFrontend[0]?.projectName || 'Unnamed Project';
-  //         setDownloadTitle(projectTitle);
-  //         const filesContent = data.forFrontend
-  //           .filter((item: { fileName: any; content: any }) => item.fileName && item.content)
-  //           .map((item: { fileName: any; content: any }) => `File: ${item.fileName}\n\n${item.content}`)
-  //           .join('\n\n');
-
-  //         const shellCommands = data.forFrontend
-  //           .filter((item: { command: any }) => item.command)
-  //           .map((item: { command: any }) => `Command: ${item.command}`)
-  //           .join('\n\n');
-
-  //         // const combinedContent = `Project Name: ${projectTitle}\n\n${filesContent}\n\n${shellCommands}`;
-  //         const streamContent = (projectTitle: any, filesContent: any, shellCommands: any) => {  
-  //           const combinedContent = `Project Name: ${projectTitle}\n\n${filesContent}\n\n`;
-  //           setCompleteCode(combinedContent);
-  //           let currentContent = ""; // Tracks the streamed content
-  //           let index = 0;
-  //           const interval = setInterval(() => {
-  //             if (index < combinedContent.length) {
-  //               currentContent += combinedContent[index]; // Append the next character
-  //               setCode(currentContent); // Update the state with partial content
-  //               index++;
-  //               if (textAreaRef.current) {
-  //                 textAreaRef.current.scrollTop = textAreaRef.current.scrollHeight;
-  //               }        
-  //             } else {
-  //               clearInterval(interval); // Clear the interval once complete
-  //             }
-  //           }, 1);
-  //         };
-  //         streamContent(projectTitle,filesContent,shellCommands);
-  //         // setCode(combinedContent);
-  //         // setProjectName(projectTitle);
-  //       } else {
-  //         setCode('No valid data received from the backend.');
-  //       }
-  //     } catch (error) {
-  //       console.error('Error fetching data:', error);
-  //       setCode('Failed to fetch data from the backend.');
-  //     } finally {
-  //       setIsLoading(false);
-  //       clearInterval(progressInterval);
-  //       setProgressValue(100);
-  //     }
-  //   };
-
-  //   const timer = setTimeout(() => {
-  //     fetchBackendData();
-  //   }, 47000);
-
-  //   return () => {
-  //     clearTimeout(timer);
-  //     clearInterval(progressInterval);
-  //     setCode('');
-  //     setProjectName('');
-  //     setProgressValue(0);
-      
-  //   };
-  // }, []);
-
   const handleFollowUpSubmit = async () => {
     if(!prompt.trim()){
       return;
     }
+    const chatID = searchParams?.get('chat');
+
     const requestData = { 
       Prompt: prompt.trim(),
       prevRes: prevRes
@@ -281,142 +276,54 @@ function Editor() {
     setCode("");
     const fetchModBackendData = async () => {
         try {
-          const response = await axios.post('https://ai-webgen-backend.onrender.com/modify', requestData );
+        
+          const idToken = await getIdToken();
+          const response = await axios.post('https://ai-webgen-backend.onrender.com/modify', requestData ,{
+            headers: {
+              Authorization: `Bearer ${idToken}`, 
+            }});
+          
           const data = response.data;
           
           if (data?.modifyFrontend) {
             const projectTitle = data.modifyFrontend[0]?.projectName || 'Unnamed Project';
             setDownloadTitle(projectTitle);
+            setTitle(projectTitle)
   
             const filesContent = data.modifyFrontend
               .filter((item: { fileName: any; content: any }) => item.fileName && item.content)
               .map((item: { fileName: any; content: any }) => `File: ${item.fileName}\n\n${item.content}`)
               .join('\n\n');
   
-            // const shellCommands = data.modifyFrontend
-            //   .filter((item: { command: any }) => item.command)
-            //   .map((item: { command: any }) => `Command: ${item.command}`)
-            //   .join('\n\n');
             
               const combinedContent = `Project Name: ${projectTitle}\n\n${filesContent}\n\n`;
+              
+              const existing = parseProjectString(prevRes)
+              const updated = parseProjectString(combinedContent)
+              const merge = mergeProjects(existing,updated)
+              const complete = stringifyProject(merge)
+
               setCompleteCode(combinedContent);
               setCode(combinedContent);
-              setPrevRes(combinedContent);
+              setPrevRes(complete);
               
+              await updateContentByChatId(currentUser?.uid, chatID! , complete); 
 
 
-
-          //   const streamContent = (projectTitle: any, filesContent: any, shellCommands: any) => {  
-          //   const combinedContent = `Project Name: ${projectTitle}\n\n${filesContent}\n\n`;
-          //   setCompleteCode(combinedContent);
-          //   let currentContent = ""; // Tracks the streamed content
-          //   let index = 0;
-          //   const interval = setInterval(() => {
-          //     if (index < combinedContent.length) {
-          //       currentContent += combinedContent[index]; // Append the next character
-          //       setCode(currentContent); // Update the state with partial content
-          //       index++;
-          //       if (textAreaRef.current) {
-          //         textAreaRef.current.scrollTop = textAreaRef.current.scrollHeight;
-          //       } 
-          //     } else {
-          //       clearInterval(interval); // Clear the interval once complete
-          //     }
-          //   }, 1);
-          // };
-          // streamContent(projectTitle,filesContent,shellCommands);
-            // setCode(combinedContent);
-            // setProjectName(projectTitle);
           } else {
             setCode('No valid data received from the backend.');
           }
         } catch (error) {
           console.error('Error fetching data:', error);
+          toast("Failed to fetch data from the backend.")
           setCode('Failed to fetch data from the backend.');
         } finally {
           setIsLoading(false);
         }
       };
+      
       fetchModBackendData();
     };
-
-
-
-
-    // let progress = 0;
-    // const followUpProgress = setInterval(() => {
-    //   if (progress < 100) {
-    //     progress += 1;
-    //     setProgressValue(Math.min(progress, 100));
-    //     if (progress < 30) {
-    //       setLabelContent('Setting things up...');
-    //     } else if (progress < 70) {
-    //       setLabelContent('Making changes...');
-    //     } else if (progress < 90) {
-    //       setLabelContent('Modifying your code...');
-    //     } 
-    //     }
-    //     else{
-    //     setLabelContent('All done! Ready to go!');
-    //     clearInterval(followUpProgress);
-    //     setIsLoading(false); // Hide progress bar
-    //   }
-    // }, 450);
-
-    // const fetchModBackendData = async () => {
-    //   try {
-    //     const response = await fetch('http://localhost:3001/modPrompt-from-backend');
-    //     const data = await response.json();
-
-    //     if (data?.modifyFrontend) {
-    //       const projectTitle = data.modifyFrontend[0]?.projectName || 'Unnamed Project';
-    //       setDownloadTitle(projectTitle);
-
-    //       const filesContent = data.modifyFrontend
-    //         .filter((item: { fileName: any; content: any }) => item.fileName && item.content)
-    //         .map((item: { fileName: any; content: any }) => `File: ${item.fileName}\n\n${item.content}`)
-    //         .join('\n\n');
-
-    //       const shellCommands = data.modifyFrontend
-    //         .filter((item: { command: any }) => item.command)
-    //         .map((item: { command: any }) => `Command: ${item.command}`)
-    //         .join('\n\n');
-
-    //       const streamContent = (projectTitle: any, filesContent: any, shellCommands: any) => {  
-    //       const combinedContent = `Project Name: ${projectTitle}\n\n${filesContent}\n\n`;
-    //       setCompleteCode(combinedContent);
-    //       let currentContent = ""; // Tracks the streamed content
-    //       let index = 0;
-    //       const interval = setInterval(() => {
-    //         if (index < combinedContent.length) {
-    //           currentContent += combinedContent[index]; // Append the next character
-    //           setCode(currentContent); // Update the state with partial content
-    //           index++;
-    //           if (textAreaRef.current) {
-    //             textAreaRef.current.scrollTop = textAreaRef.current.scrollHeight;
-    //           } 
-    //         } else {
-    //           clearInterval(interval); // Clear the interval once complete
-    //         }
-    //       }, 1);
-    //     };
-    //     streamContent(projectTitle,filesContent,shellCommands);
-    //       // setCode(combinedContent);
-    //       // setProjectName(projectTitle);
-    //     } else {
-    //       setCode('No valid data received from the backend.');
-    //     }
-    //   } catch (error) {
-    //     console.error('Error fetching data:', error);
-    //     setCode('Failed to fetch data from the backend.');
-    //   } finally {
-    //     setIsLoading(false);
-    //   }
-    // };
-
-    // setTimeout(() => {
-    //   fetchModBackendData();
-    // }, 47000);
 
   
 
@@ -548,29 +455,190 @@ function Editor() {
     });
 }
 
+function convertToObjects(data: string): { filename: string; content: string }[] {
+  // First clean the project name line
+  const cleaned = data.replace(/^Project Name: .+?\n\n/, '');
+  
+  // Split files using a more robust regex
+  const files = cleaned.split(/\n\nFile: /);
+  
+  return files.map((file, index) => { // Added index parameter
+    const firstNewline = file.indexOf("\n");
+    if (firstNewline === -1) return { filename: 'unknown', content: file };
+
+    let filename = file.slice(0, firstNewline).trim();
+    let content = file.slice(firstNewline + 1).trim();
+
+    // Clean "File: " prefix from first file
+    if (index === 0 && filename.startsWith("File: ")) {
+      filename = filename.replace(/^File:\s*/, "");
+    }
+
+    // Remove any leading/trailing code block markers
+    content = content.replace(/^```(json|html|jsx?|tsx?)?/, '')
+                     .replace(/```$/, '')
+                     .trim();
+
+    return { filename, content };
+  });
+}
+
+useEffect(() => {
+  const obj = convertToObjects(code);
+  setData(obj);
+}, [code]);
+
+interface CodeFile {
+  filename: string;
+  content: string;
+}
+
+useEffect(() => {
+  if (data.length === 0) return;
+
+  setFiles((prevFiles: Record<string, string>) => {
+    const mergedFiles = (data as CodeFile[]).reduce(
+      (acc: Record<string, string>, file: CodeFile) => {
+        try {
+          let content = file.content;
+
+          if (file.filename === "package.json") {
+            // Type-safe content comparison
+            const prevContent = prevFiles[`/${file.filename}`];
+            if (prevContent !== content) {
+              const parsed = JSON.parse(content);
+              content = JSON.stringify(parsed, null, 2);
+            }
+          }
+
+          acc[`/${file.filename}`] = content;
+        } catch (error) {
+          console.error(`Error processing ${file.filename}:`, error);
+          acc[`/${file.filename}`] = String(file.content);
+        }
+        return acc;
+      },
+      { ...prevFiles } // Start with previous files
+    );
+
+    return mergedFiles;
+  });
+}, [data]);
+
+//----------------------------------------sidebar------------------------------
+useEffect(() => {
+  const handleMouseMove = (e: MouseEvent) => {
+
+
+    // Open sidebar when mouse is within 20px of the left edge
+    if (e.clientX <= 20 && !isSideBarOpen) {
+      setIsSideBarOpen(true)
+    }
+
+    // Close sidebar when mouse is far from the sidebar (when sidebar is open)
+    if (e.clientX > 300 && isSideBarOpen) {
+      setIsSideBarOpen(false)
+    }
+  }
+
+  window.addEventListener("mousemove", handleMouseMove)
+  return () => window.removeEventListener("mousemove", handleMouseMove)
+}, [isSideBarOpen])
+
+//----------------------------------------sidebar------------------------------
+
+
+const handleIframeFullscreen = () => {
+  const iframe = document.querySelector("iframe");
+  if (iframe?.requestFullscreen) {
+    iframe.requestFullscreen();
+  }
+};
+
+//array.reduce(callback, initialValue) -> write in notes
+
 
 
   return (
     <div className="min-h-screen flex flex-col">
+    <ClaudeSidebar isOpen={isSideBarOpen} setIsOpen={setIsSideBarOpen} />
+      <div className="relative w-full">
       <div className="p-6">
         <Logo />
+      </div>
+      <div className="absolute left-1/2 top-8 transform -translate-x-1/2 flex items-center">
+        <img 
+          src={"/phantom-mascot-logo_71220-38-removebg-preview.png"}
+          alt="Title icon" 
+          className="w-8 h-8 mr-2 object-contain"
+        />
+        <h1 className="text-l font-orbitron">{title}</h1>
+      </div>
+      <div className="flex justify-center absolute right-5 top-8 ">
+        <AuthButtons />
+      </div>
       </div>
 
       <div className="flex-1 flex p-6 gap-6 relative">
         <div className="w-1/2 flex flex-col">
           <div className="mb-2 font-orbitron text-lg font-normal">CODE</div>
           <div className="relative flex-1">
-            <textarea
+          {!isLoading && (<SandpackProvider
+              style={{border:"none"}}
+              theme={myModifiedTheme}
+              files={files}
+              options={{
+                activeFile: (files as Record<string, unknown>)["/src/App.tsx"] ? "/src/App.tsx" : "unknown",
+                visibleFiles: ["/src/App.tsx"],
+              }}
+            >
+              <SandpackLayout 
+              style={{
+                scrollbarWidth:'thin',
+                scrollbarColor:"red",
+                height:"400px",
+                width:"735px",
+                backgroundColor:"black"
+              }}
+              >
+              <FolderOpen
+              style={{
+                position:"relative",
+                left:"10px",
+                top:"10px",
+                cursor:"pointer",
+                zIndex:98
+              }} 
+              size={20}
+              color="red"
+              onClick={() => {
+                setShowFiles(!showFiles);
+                setIsOpen(!isOpen)
+              }}
+              />
+              {showFiles && (
+                <SandpackFileExplorer
+                style={{
+                  marginLeft:"10px",
+                  height:"400px",
+                  width:"100px",
+                  overflow:"auto"
+                }}
+                />
+              )}
+              <SandpackCodeEditor 
+              style={{
+                marginLeft:isOpen?"0px":"10px",
+                height:"400px",
+                width:"900px"
+              }}
               readOnly
-              ref={textAreaRef}
-              className="absolute inset-0 bg-[#111] rounded-lg p-4 text-sm resize-none border border-gray-800 focus:border-gray-700 focus:outline-none input-glow mb-4 scrollbar-thin scrollbar-thumb-red-600 scrollbar-track-black"
-              value={code}
-              // onChange={(e) => setCode(e.target.value)}
-            />
-            
+              closableTabs={true}  showReadOnly={false}/>
+              </SandpackLayout> 
+         </SandpackProvider> )}
             {/* Centered Progress Bar with Explicit Styling */}
             {isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none bg-black bg-opacity-50">
+              <div className="absolute inset-0 flex items-center justify-center z-99 pointer-events-none bg-black bg-opacity-50">
                 <div className="w-full max-w-md px-4">
                   <Progress 
                     isIndeterminate 
@@ -615,6 +683,13 @@ function Editor() {
             </div>
             <div className="flex items-center space-x-4">
             <button
+            className="text-gray-400 hover:text-white"
+            title='FullScreen'
+            onClick={handleIframeFullscreen}
+            >
+            <FullscreenIcon />
+          </button>
+            <button
             // onClick={toggleTerminal}
             className="text-gray-400 hover:text-white"
             title='Terminal'
@@ -632,8 +707,17 @@ function Editor() {
             </div>
           </div>
           <div className="relative flex-1 bg-black rounded-lg border border-gray-800 focus:border-gray-700 focus:outline-none input-glow mb-2">
-            <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-stone-400 mb-2 font-orbitron">{iframeText} </p>
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div className="text-center">
+              <p className="text-stone-400 mb-2 font-orbitron">{iframeText}</p>
+              <div className="text-center text-stone-400 font-orbitron text-xs opacity-80 leading-relaxed">
+                <p>If the screen stays blank or stuck on <strong> Loading...</strong> for too long, open Developer Tools to check for errors.</p>
+                <p>
+                  Use <strong>F12</strong> or <strong>Ctrl + Shift + I</strong> (Windows/Linux)  
+                  or <strong>Cmd + Option + I</strong> (Mac) to access it.
+                </p>
+              </div>
+            </div>
           </div>
             {!url && (<div className="absolute inset-0 flex items-center justify-center"style={{ zIndex: 10 }}>
               <p className="text-black mb-2 font-orbitron"> {iframeLoader} </p>
@@ -694,7 +778,8 @@ function Editor() {
 }
 
 export default function EditorPage() {
-  return (
+  
+  return ( 
     <React.Suspense fallback={<div>Loading......</div>}>
       <Editor />
     </React.Suspense>

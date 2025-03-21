@@ -14,6 +14,127 @@
 }
 
 
+.glitch {
+  position: relative;
+  display: inline-block;
+  font-weight: bold;
+  animation: glitch 1s infinite alternate;
+}
+
+@keyframes glitch {
+  0% {
+    text-shadow: 2px 2px 5px #ff0000, -2px -2px 5px #ff3131;
+  }
+  50% {
+    text-shadow: -2px -2px 5px #ff3131, 2px 2px 5px #ff0000;
+  }
+  100% {
+    text-shadow: 2px -2px 5px #ff0000, -2px 2px 5px #ff3131;
+  }
+}
+
+
+
+button:focus,
+button:focus-visible,
+.sp-c-hluGOI:has(button:focus) {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.sp-c-gtcpyq::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.cm-scroller::-webkit-scrollbar-track {
+  background: #0d0d0d;
+  border-radius: 8px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.sp-c-gtcpyq::-webkit-scrollbar-thumb {
+  background: #b30000; /* Deep blood red */
+  border-radius: 8px;
+  border: 2px solid #1a0000;
+  box-shadow: 
+    0 0 6px rgba(179, 0, 0, 0.4),
+    inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.sp-c-gtcpyq::-webkit-scrollbar-thumb:hover {
+  background: #ff1a1a; /* Brighter red on hover */
+  box-shadow: 
+    0 0 10px rgba(255, 26, 26, 0.6),
+    inset 0 1px 2px rgba(255, 255, 255, 0.15);
+}
+
+.sp-c-gtcpyq::-webkit-scrollbar-thumb:active {
+  background: #990000; /* Darker pressed state */
+}
+
+.sp-c-gtcpyq::-webkit-scrollbar-corner {
+  background: #0a0a0a;
+}
+
+
+
+.sp-c-gGbYbQ ::-webkit-scrollbar-thumb:hover {
+  background: #ff1a1a; /* Brighter red on hover */
+  box-shadow: 
+    0 0 10px rgba(255, 26, 26, 0.6),
+    inset 0 1px 2px rgba(255, 255, 255, 0.15);
+}
+
+
+
+.sp-file-explorer-list::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.sp-file-explorer-list::-webkit-scrollbar-track {
+  background: #0d0d0d;
+  border-radius: 8px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.sp-file-explorer-list::-webkit-scrollbar-thumb {
+  background: #b30000; /* Deep blood red */
+  border-radius: 8px;
+  border: 2px solid #1a0000;
+  box-shadow: 
+    0 0 6px rgba(179, 0, 0, 0.4),
+    inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.sp-file-explorer-list::-webkit-scrollbar-thumb:hover {
+  background: #ff1a1a; /* Brighter red on hover */
+  box-shadow: 
+    0 0 10px rgba(255, 26, 26, 0.6),
+    inset 0 1px 2px rgba(255, 255, 255, 0.15);
+}
+
+.sp-file-explorer-list::-webkit-scrollbar-thumb:active {
+  background: #990000; /* Darker pressed state */
+}
+
+.sp-file-explorer-list::-webkit-scrollbar-corner {
+  background: #0a0a0a;
+}
+
+
+
+.sp-file-explorer-list ::-webkit-scrollbar-thumb:hover {
+  background: #ff1a1a; /* Brighter red on hover */
+  box-shadow: 
+    0 0 10px rgba(255, 26, 26, 0.6),
+    inset 0 1px 2px rgba(255, 255, 255, 0.15);
+}
+
 
 :root {
   --background: 0 0 0;
@@ -46,3 +167,7 @@ body {
     scrollbar-color:#7f1d1d #000000;
   }
 }
+
+
+
+
