@@ -6,8 +6,6 @@ import { enriching1, enriching2, enriching3, enriching4, enriching5, enriching6,
 import cors from 'cors'
 import 'dotenv/config';
 import authenticate from "./middleware.mjs";
-import { preFeed } from "./preFeed.mjs";
-import { system } from "./optimalPrompts.mjs";
 import { sysPrompt } from "./prompt.mjs";
 
 
