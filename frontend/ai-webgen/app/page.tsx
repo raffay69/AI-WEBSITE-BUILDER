@@ -13,14 +13,14 @@ import { ClaudeSidebar } from '@/components/ui/sidebar';
 
 export default function Home() {
 const [isSideBarOpen , setIsSideBarOpen] = useState(false)
-const {userLoggedIn} = useAuth()
+const {userLoggedIn ,currentUser} = useAuth()
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
   
   
       // Open sidebar when mouse is within 20px of the left edge
-      if (e.clientX <= 20 && !isSideBarOpen) {
+      if (e.clientX <= 45 && !isSideBarOpen) {
         setIsSideBarOpen(true)
       }
   
@@ -88,11 +88,16 @@ const {userLoggedIn} = useAuth()
                 <span className="sr-only">GitHub Profile</span>
               </Link>
             </div>
-
+            
             {/* Thin bottom accent glow */}
             <div className="absolute inset-x-0 -bottom-2 h-4 bg-red-600/30 blur-[10px] -z-20" />
           </BackgroundGradient>
         </div>
+        {userLoggedIn && currentUser?.displayName && (
+          <div className="fixed bottom-4 left-4 h-8 w-8 rounded-full bg-red-700 flex items-center justify-center text-white font-semibold z-10">
+            {currentUser.displayName.charAt(0)}
+          </div>
+        )}
       </main>
     </WavyBackground> 
   )
