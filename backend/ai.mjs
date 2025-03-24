@@ -2,13 +2,10 @@ import { GoogleGenerativeAI ,SchemaType } from "@google/generative-ai";
 import express from 'express';
 import bodyParser from 'body-parser';
 import { enriching1, enriching2, enriching3, enriching4, enriching5, enriching6, enriching7, enriching8 } from "./prompt.mjs";
-
 import cors from 'cors'
 import 'dotenv/config';
 import authenticate from "./middleware.mjs";
 import { sysPrompt } from "./prompt.mjs";
-
-
 
 
 const app = express();
@@ -68,8 +65,7 @@ const model = genAI.getGenerativeModel({
     responseSchema: schema,
   }, 
   });
-// let previousResponse = null;
-// let userPreviousResponse = "";
+
 
 
 app.post('/generate', authenticate, async (req, res) => {
@@ -82,8 +78,6 @@ app.post('/generate', authenticate, async (req, res) => {
   try {
     const forFrontend = await generateContent(Prompt);
     
-    // forFrontend.push(...preFeed)				
-
     res.json({forFrontend});
   } catch (error) {
     if (!res.headersSent) {
@@ -130,46 +124,20 @@ const prompt = {
   ]
 };
 
-// userPreviousResponse+=genReq;
 const result = await model.generateContent(prompt);
-// console.log(result.response.candidates[0].content.parts[1].text);
 console.log(result.response.text())
 
-// Print text as it comes in.
-// let fullResponse = result.response.candidates[0].content.parts[1].text;
 let data = result.response.text();
-// for await (const chunk of result.stream) {
-//   const chunkText = chunk.text();
-//   fullResponse += chunkText; 
-//   process.stdout.write(chunkText);
-// }
-
-// const jsonMatch = fullResponse.match(/(\{[\s\S]*\})/);
-// const jsonString = jsonMatch ? jsonMatch[0] : fullResponse;
-
 let projectData;
 try {
   projectData = JSON.parse(data);
 } catch (error) {
   console.error('Error parsing the AI response:', error);
-  // process.exit(1); // Exit if parsing fails
-  // if (error instanceof SyntaxError) {
-  //   const position = error.message.match(/at position (\d+)/);
-  //   if (position) {
-  //       const errorPosition = parseInt(position[1], 10);
-  //       const errorSnippet = cleanedResponse.slice(errorPosition - 150, errorPosition + 150); // Get 50 characters before and after the error position
-  //       console.error("JSON parsing error at position:", errorPosition);
-  //       console.error("Error snippet:", errorSnippet);
-  //     }
-  //   }
-  //   const fixedString = cleanedResponse.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
-  //   return projectData = JSON.parse(fixedString);
   }
 
 if (!projectData || !Array.isArray(projectData.actions)) {
   console.error('Invalid project structure:', projectData);
-  // process.exit(1); // Exit if project data is incomplete or malformed
-}
+  }
 
 // Log file names and their content, and handle commands
 const logActions = () => {
@@ -194,14 +162,8 @@ const logActions = () => {
   return result;
 };
 
-// Process the actions
-// forFrontend =  logActions();
-// console.log(logActions());
 return logActions();
 
-// app.get('/prompt-from-backend', (req, res) => {
-//   res.json({ forFrontend }); // Send the variable as JSON
-// });
 }
 
 app.post('/modify',authenticate, async (req, res) => {
@@ -211,7 +173,6 @@ app.post('/modify',authenticate, async (req, res) => {
   }
   // After receiving the prompt, run the logic that needs to be executed
   try {
-    // res.json({"content-received": modReq});
    const modifyFrontend =  await modifyContent(Prompt , prevRes);
     res.json({modifyFrontend}); 
   } catch (error) {
@@ -272,7 +233,6 @@ async function modifyContent(modReq , previousResponse){
     ]
   };
   
-  // userPreviousResponse+=modReq;
   const result = await model.generateContentStream(prompt);
   
   // Print text as it comes in.
@@ -294,18 +254,15 @@ async function modifyContent(modReq , previousResponse){
   
   // Clean up the string to remove control characters (like newlines, tabs, etc.)
   cleanedResponse = cleanedResponse.replace(/[\x00-\x1F\x7F]/g, ''); // Remove control characters
-  // previousResponse = cleanedResponse;
   let projectData;
   try {
     projectData = JSON.parse(cleanedResponse);
   } catch (error) {
     console.error('Error parsing the AI response:', error);
-    // process.exit(1); // Exit if parsing fails
   }
   
   if (!projectData || !Array.isArray(projectData.actions)) {
     console.error('Invalid project structure:', projectData);
-    // process.exit(1); // Exit if project data is incomplete or malformed
   }
   
   // Log file names and their content, and handle commands
@@ -330,12 +287,6 @@ async function modifyContent(modReq , previousResponse){
   
     return result;
   };
-  // Process the actions
-// modifyFrontend =  logActions();
-// console.log(logActions());
 
 return logActions();
-// app.get('/modPrompt-from-backend', (req, res) => {
-//   res.json({ modifyFrontend }); // Send the variable as JSON
-// });
 }
