@@ -64,6 +64,7 @@ function Editor() {
   const [isReloded , setIsReloded] = useState(false)
   const [title , setTitle] = useState("untitled")
   const [isSideBarOpen , setIsSideBarOpen] = useState(false)
+  const [errors , setErrors] =  useState<string[]>([]);
   
   
   useEffect(()=>{
@@ -325,7 +326,80 @@ function Editor() {
       fetchModBackendData();
     };
 
+    const handleErrorsSubmit = async () => {
+      
+      const chatID = searchParams?.get('chat');
   
+      const requestData = { 
+        Prompt: `Fix these errors:\n\n${errors.join('\n')}`,
+        prevRes: prevRes
+      }
+      setPrompt('');
+      setErrors([])
+      setIsLoading(true); 
+      setCode("");
+      const fetchModBackendData = async () => {
+          try {
+          
+            const idToken = await getIdToken();
+            const response = await axios.post('https://ai-webgen-backend.onrender.com/modify', requestData ,{
+              headers: {
+                Authorization: `Bearer ${idToken}`, 
+              }});
+            
+            const data = response.data;
+            
+            if (data?.modifyFrontend) {
+              const projectTitle = data.modifyFrontend[0]?.projectName || 'Unnamed Project';
+              setDownloadTitle(projectTitle);
+              setTitle(projectTitle)
+    
+              const filesContent = data.modifyFrontend
+                .filter((item: { fileName: any; content: any }) => item.fileName && item.content)
+                .map((item: { fileName: any; content: any }) => `File: ${item.fileName}\n\n${item.content}`)
+                .join('\n\n');
+    
+              
+                const combinedContent = `Project Name: ${projectTitle}\n\n${filesContent}\n\n`;
+                
+                const existing = parseProjectString(prevRes)
+                const updated = parseProjectString(combinedContent)
+                const merge = mergeProjects(existing,updated)
+                const complete = stringifyProject(merge)
+  
+                setCompleteCode(combinedContent);
+                setCode(combinedContent);
+                setPrevRes(complete);
+                
+                await updateContentByChatId(currentUser?.uid, chatID! , complete); 
+                toast(
+                  <span className="glitch font-orbitron">
+                     Errors fixed! Click <strong>'Show Preview'</strong> to run the updated code. 
+                  </span>,
+                  {
+                    style: {
+                      background: "#001100", // Dark green background
+                      color: "#00ff00", // Neon green text
+                      border: "1px solid #00ff00", // Neon green border
+                      textShadow: "0 0 5px #00ff00, 0 0 10px #00ff55", // Glowing green effect
+                    },
+                  }
+                );
+            } else {
+              setCode('No valid data received from the backend.');
+            }
+          } catch (error) {
+            console.error('Error fetching data:', error);
+            toast("Failed to fetch data from the backend.")
+            setCode('Failed to fetch data from the backend.');
+          } finally {
+            setIsLoading(false);
+          }
+        };
+        
+        fetchModBackendData();
+      };
+
 
   useEffect(()=>{
     if (isFirstRender.current) {
@@ -419,8 +493,15 @@ function Editor() {
         console.log(cleanData.trim());
 
         // Check for specific errors
-        if (/ReferenceError/.test(cleanData)) {
-            console.error('ReferenceError:', cleanData);
+        if (/ReferenceError|Error|TypeError|SyntaxError|warning|failed|failure|exception|invalid|unexpected|cannot|unable|unhandled|rejected|not found|undefined|null|crashed|missing|conflict|deprecated|fatal|ERR!|error when starting dev server|webpack|module not found|Failed to compile|Cannot find module|Cannot resolve module|Invalid hook call|React Hook|React.createElement|React.Component|Uncaught|ENOENT|EACCES|EPERM|EADDRINUSE|ECONNREFUSED|export .* was not found|import .* from/i.test(cleanData)) {
+          // Add error to state
+          setErrors(prev => {
+            const updatedErrors = [...prev, cleanData.trim()];
+            console.log(`----------------errors---------------------
+                ${updatedErrors}
+                ----------------errors end---------------------`);
+            return updatedErrors;
+        });
         }
     };
 
@@ -437,6 +518,44 @@ function Editor() {
     // Wait for install to complete
     await installProcess?.exit;
 
+
+    window.addEventListener('message', (event) => {
+      if (event.data && (
+        event.data.type === 'react-error' || 
+        event.data.type === 'react-promise-error' ||
+        event.data.type === 'react-console-error' ||
+        event.data.type === 'react-module-error'  // Add the new error type
+      )) {
+        // Store the error
+        setErrors(prev => {
+          let errorMessage;
+          
+          if (event.data.type === 'react-error') {
+            errorMessage = `React Error: ${event.data.message} at ${event.data.filename}:${event.data.lineno}`;
+          } else if (event.data.type === 'react-module-error') {
+            errorMessage = `Module Error: ${event.data.message}`;
+          } else {
+            errorMessage = `${event.data.type}: ${event.data.message || JSON.stringify(event.data)}`;
+          }
+          
+          const updatedErrors = [...prev, errorMessage];
+          console.log(`----------------React App Error---------------------
+              ${errorMessage}
+              ----------------React App Error End---------------------`);
+          return updatedErrors;
+        });
+      }
+    });
+
+
+    const injected = await injectEnhancedErrorHandling();
+    if (injected) {
+      console.log("Successfully injected error handling");
+    } else {
+      console.log("Could not inject error handling, falling back to console log parsing");
+    }
+
+
     // Start dev server
     const devProcess = await webcontainer?.spawn('npm', ['run', 'dev']);
 
@@ -447,6 +566,7 @@ function Editor() {
       }
     }));
 
+
     // Wait for server to be ready
     webcontainer?.on('server-ready', (port, url) => {
       console.log('Server URL:', url);
@@ -454,6 +574,202 @@ function Editor() {
       setUrl(url);
     });
 }
+
+
+
+async function injectEnhancedErrorHandling() {
+  try {
+    // First, try to modify index.html to catch errors early
+    try {
+      const htmlContent = await webcontainer?.fs.readFile('index.html', 'utf-8');
+      
+      // Create our early error handling script
+      const earlyErrorHandlingScript = `
+      <script>
+        // Set up early error handlers before any modules load
+        window.addEventListener('error', function(event) {
+          // Check if this is a script error or module loading error
+          const isModuleError = event.message && (
+            event.message.includes('module') || 
+            event.message.includes('import') || 
+            event.message.includes('export')
+          );
+          
+          window.parent.postMessage({
+            type: isModuleError ? 'react-module-error' : 'react-error',
+            message: event.message,
+            filename: event.filename,
+            lineno: event.lineno,
+            colno: event.colno,
+            stack: event.error?.stack || 'No stack trace available'
+          }, '*');
+          
+          // Log to console for debugging
+          console.error('[Error Tracking]', event.message);
+        });
+        
+        // Track unhandled promise rejections
+        window.addEventListener('unhandledrejection', function(event) {
+          window.parent.postMessage({
+            type: 'react-promise-error',
+            message: event.reason?.message || 'Unhandled Promise Rejection',
+            stack: event.reason?.stack || 'No stack trace available'
+          }, '*');
+        });
+        
+        // Override console.error to capture React errors
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+          // Call original console.error
+          originalConsoleError.apply(console, args);
+          
+          // Extract message from arguments
+          const errorMsg = args.map(arg => 
+            typeof arg === 'object' && arg !== null ? 
+              (arg instanceof Error ? arg.toString() : JSON.stringify(arg)) 
+              : String(arg)
+          ).join(' ');
+          
+          // Check if this looks like a module error
+          const isModuleError = errorMsg.includes('module') || 
+                               errorMsg.includes('import') || 
+                               errorMsg.includes('export');
+          
+          // Post to parent
+          window.parent.postMessage({
+            type: isModuleError ? 'react-module-error' : 'react-console-error',
+            message: errorMsg
+          }, '*');
+        };
+        
+        // Special handler for syntax errors in modules
+        window.moduleLoadErrors = [];
+        window.captureModuleError = function(error) {
+          window.moduleLoadErrors.push(error);
+          window.parent.postMessage({
+            type: 'react-module-error',
+            message: error.message || 'Module Loading Error',
+            stack: error.stack || 'No stack trace available'
+          }, '*');
+        };
+      </script>
+      `;
+      
+      // Add try-catch wrapper for script tags
+      const scriptTagPattern = /<script\s+type=["']module["']\s+src=["']([^"']+)["']\s*><\/script>/g;
+      let modifiedHtml = htmlContent!.replace(scriptTagPattern, (match, src) => {
+        return `<script type="module">
+          try {
+            import('${src}').catch(error => {
+              window.captureModuleError(error);
+            });
+          } catch (error) {
+            window.captureModuleError(error);
+          }
+        </script>`;
+      });
+      
+      // Inject early error handling script at the beginning of head
+      modifiedHtml = modifiedHtml.replace('<head>', '<head>\n' + earlyErrorHandlingScript);
+      
+      await webcontainer?.fs.writeFile('index.html', modifiedHtml);
+      console.log("Injected enhanced error handling into index.html");
+    } catch (htmlError) {
+      console.error("Error modifying HTML:", htmlError);
+    }
+    
+    // Also inject into the entry file as before
+    const entryFile = `src/main.tsx`;
+    try {
+      console.log(`Also injecting error handling into entry file: ${entryFile}`);
+      const content = await webcontainer?.fs.readFile(entryFile, 'utf-8');
+      
+      // Create enhanced error reporting code for the entry file
+      const errorReportingCode = `
+// Enhanced error reporting code - injected by webcontainer
+// These will catch runtime errors after modules are loaded
+
+// Function to safely stringify objects
+function safeStringify(obj) {
+  try {
+    if (obj instanceof Error) {
+      return obj.message + (obj.stack ? '\\n' + obj.stack : '');
+    }
+    return typeof obj === 'object' && obj !== null ? JSON.stringify(obj) : String(obj);
+  } catch (e) {
+    return 'Error: Unable to stringify object';
+  }
+}
+
+// Error event listener
+window.addEventListener('error', function(event) {
+  const errorInfo = {
+    type: 'react-error',
+    message: event.message,
+    filename: event.filename,
+    lineno: event.lineno,
+    colno: event.colno,
+    stack: event.error?.stack || 'No stack trace available'
+  };
+  
+  console.log('[Error Tracker] Caught error:', errorInfo);
+  window.parent.postMessage(errorInfo, '*');
+});
+
+// Promise rejection handler
+window.addEventListener('unhandledrejection', function(event) {
+  const errorInfo = {
+    type: 'react-promise-error',
+    message: event.reason?.message || 'Unhandled Promise Rejection',
+    stack: event.reason?.stack || 'No stack trace available'
+  };
+  
+  console.log('[Error Tracker] Caught promise rejection:', errorInfo);
+  window.parent.postMessage(errorInfo, '*');
+});
+
+// Console.error override
+const originalConsoleError = console.error;
+console.error = function(...args) {
+  // Call original console.error
+  originalConsoleError.apply(console, args);
+  
+  // Extract message from arguments
+  const errorMsg = args.map(safeStringify).join(' ');
+  
+  // Post to parent
+  window.parent.postMessage({
+    type: 'react-console-error',
+    message: errorMsg
+  }, '*');
+};
+`;
+
+      // Inject at the beginning of the file
+      const modifiedContent = errorReportingCode + '\n\n' + content;
+      
+      // Write back the modified file
+      await webcontainer?.fs.writeFile(entryFile, modifiedContent);
+      console.log(`Successfully injected error handling into ${entryFile}`);
+    }
+    catch(error){
+      console.error(`Entry file ${entryFile} not found or could not be modified:`, error);
+      // Post a specific message about the missing entry point
+      window.parent.postMessage({
+        type: 'react-module-error',
+        message: `Entry file not found: ${entryFile}`
+      }, '*');
+    }
+
+    
+    return true;
+  } catch (error) {
+    console.error("Error injecting enhanced error handlers:", error);
+    return false;
+  }
+}
+
+
 
 function convertToObjects(data: string): { filename: string; content: string }[] {
   // First clean the project name line
@@ -763,7 +1079,48 @@ const handleIframeFullscreen = () => {
                       })
                     )}
                   </div>
-                )}     
+                )}
+        {/* error display */}
+        {errors.length > 0 && (
+          <div 
+            className="absolute bottom-36 inset-0 flex  items-end justify-center z-[10000] pointer-events-none"
+            style={{ padding: '0 1rem 1rem 1rem' }}
+          >
+            <div 
+              className="bg-red-900/90 border border-red-700 rounded-lg shadow-lg w-full max-w-full max-h-62  pointer-events-auto"
+            >
+              <div className="flex justify-between items-center p-3 border-b border-red-700">
+                <h3 className="text-red-300 font-bold font-orbitron">
+                  {errors.length} {errors.length === 1 ? 'Error' : 'Errors'} Detected
+                </h3>
+                <div className='flex gap-2'>
+                <button 
+              onClick={handleErrorsSubmit} 
+              className="text-white hover:text-white bg-black hover:bg-black/60 rounded px-3 py-1 text-sm font-orbitron transition-colors border border-red-700"
+            >
+              Fix with <span className="inline-block font-orbitron text-sm font-bold text-red-600 tracking-wider">
+              &nbsp; PHANTOM
+              </span>
+            </button>
+            <button 
+              onClick={() => setErrors([])} 
+              className="text-red-300 hover:text-white bg-red-800 hover:bg-red-700 rounded px-2 py-1 text-sm font-orbitron transition-colors"
+            >
+              Clear
+            </button>
+            </div>
+              </div>
+              <div className="p-3 text-red-200 font-mono text-sm overflow-y-auto max-h-48 scrollbar-thin scrollbar-thumb-red-600 scrollbar-track-red-900/50">
+                {errors.map((error, index) => (
+                  <div key={index} className="mb-2 last:mb-0 border-l-2 border-red-600 pl-2"> 
+                    {error}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+        {/* error display end */}     
           </div>
         </div>
       </div>
