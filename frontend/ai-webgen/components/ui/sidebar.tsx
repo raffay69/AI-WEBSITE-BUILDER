@@ -6,9 +6,11 @@ import { useAuth } from "@/app/auth/authContext"
 import { Logo } from "../logo"
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { getUserContent } from "@/app/auth/firebase"
+import { deleteUserContent, getUserContent } from "@/app/auth/firebase"
 import { Skeleton } from "./skeleton"
 import { useSearchParams } from "next/navigation"
+import {Trash} from "lucide-react"
+import { toast } from "sonner"
 
 interface ClaudeSidebarProps {
   isOpen: boolean
@@ -44,7 +46,58 @@ export function ClaudeSidebar({isOpen, setIsOpen }: ClaudeSidebarProps) {
     };
     
     fetchData();
-  }, [currentUser , isOpen]);
+  }, [currentUser , isOpen , content ]);
+
+
+  const deleteDoc = async (userid:string|undefined, chadid:string)=>{
+    try{
+      const res = await deleteUserContent(userid! , chadid)
+      if(res.success){
+        toast(
+        <span className="glitch font-orbitron">
+            Chat deleted successfully 
+        </span>,
+        {
+          style: {
+            background: "#001100", // Dark green background
+            color: "#00ff00", // Neon green text
+            border: "1px solid #00ff00", // Neon green border
+            textShadow: "0 0 5px #00ff00, 0 0 10px #00ff55", // Glowing green effect
+          },
+        })
+      }else{
+        toast(
+          <span className="glitch font-orbitron" data-text="🔴 SESSION TERMINATED 🔴">
+            Error deleting Chat 
+          </span>,
+          {
+            style: {
+              background: "#110000",
+              color: "#ff3131", 
+              border: "1px solid #ff0000", 
+              textShadow: "0 0 5px #ff0000, 0 0 10px #ff3131",
+            },
+          }
+        );
+      } 
+    }
+    catch(e){
+      toast(
+        <span className="glitch font-orbitron" data-text="🔴 SESSION TERMINATED 🔴">
+          Unexpected error deleting the Chat 
+        </span>,
+        {
+          style: {
+            background: "#110000",
+            color: "#ff3131", 
+            border: "1px solid #ff0000", 
+            textShadow: "0 0 5px #ff0000, 0 0 10px #ff3131",
+          },
+        }
+      );
+    }
+  }
+
 
   return (
     <>
@@ -87,9 +140,8 @@ export function ClaudeSidebar({isOpen, setIsOpen }: ClaudeSidebarProps) {
             </Button>
           </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto py-4">
-            <div className="px-3 mb-4">
+          {/* New chat */}
+          <div className="px-3  mt-2">
             <Link href="/" className="flex items-center px-3 py-2 text-sm rounded-md hover:bg-red-950/40 group">
                 <img 
                     src={"/phantom-mascot-logo_71220-38-removebg-preview.png"}
@@ -99,7 +151,9 @@ export function ClaudeSidebar({isOpen, setIsOpen }: ClaudeSidebarProps) {
                 <span className="font-orbitron text-red-400 text-l">Start New Chat</span>
                 </Link>
             </div>
-            
+
+          {/* Navigation */}
+          <nav className="flex-1 overflow-y-auto py-4">
             <div className="px-3 py-2">
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Recents</h3> 
               <ul className="space-y-1">
@@ -136,29 +190,37 @@ export function ClaudeSidebar({isOpen, setIsOpen }: ClaudeSidebarProps) {
                 content.map((item) => (
                   <li 
                   key={item.id}
-                  className={chatID === item.chatID ? 'bg-red-950/60' : ''}
+                  className={`relative flex items-center ${chatID === item.chatID ? 'bg-red-950/60' : ''}`}
+                >
+                  <Link
+                    href={`/editor/?chat=${item.chatID}&prompt=${encodeURIComponent(item.prompt.trim())}`}
+                    passHref
+                    legacyBehavior
                   >
-                    <Link
-                      href={`/editor/?chat=${item.chatID}&prompt=${encodeURIComponent(item.prompt.trim())}`}
-                      passHref
-                      legacyBehavior
+                    <a
+                      className="flex items-center px-2 py-0.5 text-sm rounded-md hover:bg-red-950/40 group flex-grow"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        window.location.href = `/editor/?chat=${item.chatID}&prompt=${encodeURIComponent(item.prompt.trim())}`;
+                      }}
                     >
-                      <a
-                        className="flex items-center px-2 py-0.5 text-sm rounded-md hover:bg-red-950/40 group"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          window.location.href = `/editor/?chat=${item.chatID}&prompt=${encodeURIComponent(item.prompt.trim())}`;
-                        }}
-                      >
-                        <img 
-                          src={"/phantom-mascot-logo_71220-38-removebg-preview.png"}
-                          alt="Title icon" 
-                          className="w-8 h-8 mr-2 object-contain"
-                        />
-                        <span>{item.title}</span>
-                      </a>
-                    </Link>
-                  </li>
+                      <img 
+                        src={"/phantom-mascot-logo_71220-38-removebg-preview.png"}
+                        alt="Title icon" 
+                        className="w-8 h-8 mr-2 object-contain"
+                      />
+                      <span>{item.title}</span>
+                    </a>
+                  </Link>
+                  <button 
+                    className="absolute right-0 top-1/2 -translate-y-1/2 text-red-500 hover:text-red-700 px-2 py-1 rounded-md "
+                    onClick={() => {
+                      deleteDoc(currentUser?.uid,item.chatID)
+                    }}
+                  >
+                    <Trash className="w-4 h-4" ></Trash>
+                  </button>
+                </li>
                 ))
               ) : (
                 <li>

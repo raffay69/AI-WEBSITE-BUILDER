@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc } from "firebase/firestore";
+import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc ,deleteDoc } from "firebase/firestore";
 
 
 const firebaseConfig = {
@@ -131,6 +131,48 @@ async function updateContentByChatId(userId: any, chatId: string , content: any)
 }
 
 
+async function deleteUserContent(userId: string, chatId: string) {
+  try {
+    // Find the document with the matching userId and chatId
+    const userContentRef = collection(db, "userContent");
+    const q = query(
+      userContentRef, 
+      where("userId", "==", userId),
+      where("chatID", "==", chatId)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      // Get the first matching document
+      const docToDelete = querySnapshot.docs[0];
+      const docRef = doc(db, "userContent", docToDelete.id);
+      
+      // Delete the document
+      await deleteDoc(docRef);
+      
+      console.log("Document successfully deleted for chatId:", chatId);
+      return {
+        success: true,
+        message: "Content deleted successfully"
+      };
+    } else {
+      console.warn("No document found with chatId:", chatId);
+      return {
+        success: false,
+        message: "No matching document found"
+      };
+    }
+  } catch (error) {
+    console.error("Error deleting document: ", error);
+    return {
+      success: false,
+      message: "Failed to delete content",
+      error: error instanceof Error ? error.message : "Unknown error"
+    };
+  }
+}
 
 
-export { app, auth , getUserContent , addUserContent , getContentByIDPrompt ,updateContentByChatId };
+
+export { app, auth , getUserContent , addUserContent , getContentByIDPrompt ,updateContentByChatId ,deleteUserContent };

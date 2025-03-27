@@ -65,6 +65,7 @@ function Editor() {
   const [title , setTitle] = useState("untitled")
   const [isSideBarOpen , setIsSideBarOpen] = useState(false)
   const [errors , setErrors] =  useState<string[]>([]);
+  const [inject , setInject] = useState(false)
   
   
   useEffect(()=>{
@@ -548,12 +549,17 @@ function Editor() {
     });
 
 
+    if(!inject){
     const injected = await injectEnhancedErrorHandling();
     if (injected) {
       console.log("Successfully injected error handling");
+      setInject(true)
     } else {
       console.log("Could not inject error handling, falling back to console log parsing");
     }
+  } else if(inject){
+    console.log("already injected")
+  }
 
 
     // Start dev server
