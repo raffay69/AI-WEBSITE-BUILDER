@@ -112,7 +112,7 @@ const {userLoggedIn ,currentUser} = useAuth()
               borderRadius="1.75rem"
               className="bg-black p-4 dark:bg-black text-black dark:text-white border-neutral-200 dark:border-slate-800">
               Want to generate web apps in minutes? Explore
-              <a href="http://localhost:3000" className='hover:opacity-80'> 
+              <a href="https://phantom-ai-raffay.vercel.app" className='hover:opacity-80'> 
               <span className="font-orbitron text-sm font-bold text-red-600 ml-1 tracking-wider">
               PHANTOM
               </span>
