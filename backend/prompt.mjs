@@ -274,12 +274,12 @@ Here are some examples of correct usage of artifacts:
   </example>
 </examples>
 `
-export const enriching1 = `For all designs I ask you to make, have them be beautiful, not cookie cutter. Make webpages that are fully featured and worthy for production.\n\nBy default, this template supports JSX syntax with Tailwind CSS classes, React hooks, and Lucide React for icons. Do not install other packages for UI themes, icons, etc unless absolutely necessary or I request them.\n\nUse icons from lucide-react for logos.\n\nUse stock photos from unsplash where appropriate,!!ULTRA IMPORANT 'only valid URLs you know exist'. Do not download the images, only link to them in image tags.
+export const webEnriching1 = `For all designs I ask you to make, have them be beautiful, not cookie cutter. Make webpages that are fully featured and worthy for production.\n\nBy default, this template supports JSX syntax with Tailwind CSS classes, React hooks, and Lucide React for icons. Do not install other packages for UI themes, icons, etc unless absolutely necessary or I request them.\n\nUse icons from lucide-react for logos.\n\nUse stock photos from unsplash where appropriate,!!ULTRA IMPORANT 'only valid URLs you know exist'. Do not download the images, only link to them in image tags.
 Please use only valid Lucide React icons in any example or code provided. A valid Lucide React icon is any component exported from the \`lucide-react\` package. Refer to the official list of Lucide icons at [https://lucide.dev/icons](https://lucide.dev/icons) or the GitHub repository at [https://github.com/lucide-icons/lucide](https://github.com/lucide-icons/lucide). Avoid using icon names that are not explicitly mentioned in these resources.
 !!!!!!!! DO NOT WRITE COMMENTS IN ANY OF THESE FILES [// - > dont do this ] !!!!!!!!!!!!!!!!!!!
 `
         
-export const enriching2 = `IMPORTANT: Please do not use backticks (\`) in your responses. Provide plain text or raw JSON/JavaScript without any surrounding code blocks or special characters.
+export const webEnriching2 = `IMPORTANT: Please do not use backticks (\`) in your responses. Provide plain text or raw JSON/JavaScript without any surrounding code blocks or special characters.
         
             For example, instead of returning this:
             \`\`\`json
@@ -369,11 +369,11 @@ export const enriching2 = `IMPORTANT: Please do not use backticks (\`) in your r
                   Follow these instructions to ensure the response is error-free and valid JSON.
               }`
 
-export const enriching3 =  `!!!ULTRA IMPORTANT ->Project Files:\n\nProvide all necessary files and configurations, including:\n\n- A fully functional package.json file with all dependencies and devDependencies.
+export const webEnriching3 =  `!!!ULTRA IMPORTANT ->Project Files:\n\nProvide all necessary files and configurations, including:\n\n- A fully functional package.json file with all dependencies and devDependencies.
 Please ensure that all dependencies used in the project are updated to their latest stable and valid versions. Use officially released versions as listed in their respective package registries (e.g., npm, PyPI, etc.). Avoid using deprecated, beta, or experimental versions unless explicitly specified. Check for compatibility and update the package versions in \`package.json\` (or equivalent) accordingly.
 \n- Boilerplate code for a React project (index.html, App.js, index.js, and basic styles like App.css).\n- Configuration files such as vite.config.js or webpack.config.js (if applicable).\n- A .gitignore file.`
         
-export const enriching4 = `Use the ${fetchImage} function to fetch the appropriate image URL based on the user's prompt. 
+export const webEnriching4 = `Use the ${fetchImage} function to fetch the appropriate image URL based on the user's prompt. 
           **Guidelines:**
           1. Analyze the user's prompt and extract a **single word** that best represents the key concept (e.g., "shoe," "hiking," "nature").
           2. Generate the image URL by calling ${fetchImage} with this word.
@@ -387,13 +387,13 @@ export const enriching4 = `Use the ${fetchImage} function to fetch the appropria
           - Use ${fetchImage('shoe')} to get the image URL.
           **Important:** Ensure that all URLs are checked before usage to avoid broken links. This is ULTRA IMPORTANT for the functionality of the website.`
        
-export const enriching5 =  `Here is an artifact that contains all files of the project visible to you.\nConsider the contents of ALL files in the project.\n\n${reactBasePrompt}\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - .gitignore\n  - package-lock.json\n`
+export const webEnriching5 =  `Here is an artifact that contains all files of the project visible to you.\nConsider the contents of ALL files in the project.\n\n${reactBasePrompt}\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - .gitignore\n  - package-lock.json\n`
        
-export const enriching6 = `use these files ${reactBasePrompt}`
+export const webEnriching6 = `use these files ${reactBasePrompt}`
 
-export const enriching7 = "<bolt_running_commands>\n</bolt_running_commands>\n# File Changes\n\nHere is a list of all files that have been modified since the start of the conversation.\nThis information serves as the true contents of these files!\n\nThe contents include either the full file contents or a diff (when changes are smaller and localized).\n\nUse it to:\n - Understand the latest file modifications\n - Ensure your suggestions build upon the most recent version of the files\n - Make informed decisions about changes\n - Ensure suggestions are compatible with existing code\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - /home/project/.bolt/config.json"
+export const webEnriching7 = "<bolt_running_commands>\n</bolt_running_commands>\n# File Changes\n\nHere is a list of all files that have been modified since the start of the conversation.\nThis information serves as the true contents of these files!\n\nThe contents include either the full file contents or a diff (when changes are smaller and localized).\n\nUse it to:\n - Understand the latest file modifications\n - Ensure your suggestions build upon the most recent version of the files\n - Make informed decisions about changes\n - Ensure suggestions are compatible with existing code\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - /home/project/.bolt/config.json"
         
-export const enriching8 = `
+export const webEnriching8 = `
 Always include the following files along with the project setup, and ensure they use !!!!!!!!ES module syntax!!!!!!!!!!! only:
 
 - **eslint.config.js**

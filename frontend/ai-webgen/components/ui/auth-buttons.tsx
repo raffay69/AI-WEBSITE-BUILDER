@@ -17,7 +17,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from "sonner";
 
 
-export default function AuthButtons() {
+export default function AuthButtons({color}:{color:string}) {
   const {userLoggedIn , currentUser}  = useAuth()
   const router = useRouter();
 
@@ -55,7 +55,8 @@ export default function AuthButtons() {
             </Link>
           </Button>
           <Button 
-            className=" text-red-700 transition-all duration-300 font-orbitron px-6 py-2 rounded-md shadow-sm hover:shadow-md"
+            className="transition-all duration-300 font-orbitron px-6 py-2 rounded-md shadow-sm hover:shadow-md"
+            style={{color:color}}
           >
             <Link href="/signUp">
             Sign Up
@@ -67,18 +68,19 @@ export default function AuthButtons() {
           <DropdownMenuTrigger asChild>
             <Button 
               variant="ghost" 
-              className="flex items-center gap-2 hover:text-red-600 font-medium text-white"
+              className="flex items-center gap-2 hover:text-[var(--hover-color)] font-medium text-white" style={{'--hover-color': color} as React.CSSProperties}
             >
               <User className="h-4 w-4" />
-              <span>{currentUser?.displayName}</span>
+              <span >{currentUser?.displayName}</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 bg-black shadow-lg">
+          <DropdownMenuContent align="end" className="w-56 bg-black shadow-lg hover:bg-[var(--hover-color)]" style={{'--hover-color':color } as React.CSSProperties}>
             <DropdownMenuItem
-              className="hover:bg-red-900 text-white focus:bg-red-900 focus:text-white"
+              className="cursor-pointer" 
+              onClick={signOut}
             >
-              <LogOut className="mr-2 h-4 w-4 text-red-600" />
-              <span onClick={signOut} >Logout</span>
+              <LogOut className="mr-2 h-4 w-4 " />
+              <span >Logout</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

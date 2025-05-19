@@ -3,25 +3,30 @@ import { motion, AnimatePresence } from "framer-motion"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/app/auth/authContext"
-import { Logo } from "../logo"
+import { Logo, Logo2 } from "../logo"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { deleteUserContent, getUserContent } from "@/app/auth/firebase"
 import { Skeleton } from "./skeleton"
-import { useSearchParams } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {Trash} from "lucide-react"
 import { toast } from "sonner"
 
 interface ClaudeSidebarProps {
   isOpen: boolean
   setIsOpen: (isOpen: boolean) => void
+  color : string
 }
 
-export function ClaudeSidebar({isOpen, setIsOpen }: ClaudeSidebarProps) {
+
+export function ClaudeSidebar({isOpen, setIsOpen , color }: ClaudeSidebarProps) {
    const { currentUser}  = useAuth()
-   const [content, setContent] = useState<{ id: string; title: string ; chatID : string ; prompt : string }[]>([]);
+   const [content, setContent] = useState<{ id: string; title: string ; chatID : string ; prompt : string ; type:string}[]>([]);
    const [loading, setLoading] = useState(true);
    const searchParams = useSearchParams(); 
+   const pathName = usePathname()
+   const router = useRouter()
+
 
    const chatID = searchParams?.get('chat');
 
@@ -48,6 +53,7 @@ export function ClaudeSidebar({isOpen, setIsOpen }: ClaudeSidebarProps) {
     fetchData();
   }, [currentUser , isOpen , content ]);
 
+  const imagePath = pathName.startsWith('/mobile')?"/phantom-mobile.png":"/phantom-mascot-logo_71220-38-removebg-preview.png"
 
   const deleteDoc = async (userid:string|undefined, chadid:string)=>{
     try{
@@ -65,6 +71,7 @@ export function ClaudeSidebar({isOpen, setIsOpen }: ClaudeSidebarProps) {
             textShadow: "0 0 5px #00ff00, 0 0 10px #00ff55", // Glowing green effect
           },
         })
+        router.push('/')
       }else{
         toast(
           <span className="glitch font-orbitron" data-text="🔴 SESSION TERMINATED 🔴">
@@ -120,14 +127,14 @@ export function ClaudeSidebar({isOpen, setIsOpen }: ClaudeSidebarProps) {
         initial={{ x: "-100%" }}
         animate={{ x: isOpen ? 0 : "-100%" }}
         transition={{ type: "tween", duration: 0.15, ease: "easeInOut" }}
-        className="fixed top-0 left-0 h-full w-[280px] z-[99] backdrop-blur-md bg-[rgba(0,0,0,0.03)] border-r border-red-900/50"
+        className="fixed top-0 left-0 h-full w-[280px] z-[99] backdrop-blur-md bg-[rgba(0,0,0,0.03)] border-r border-[var(--border-color)]" style={{"--border-color":color} as React.CSSProperties }
         >
         <div className="flex flex-col h-full text-gray-200">
           {/* Header with Logo */}
-          <div className="flex items-center justify-between p-4 border-b border-red-900/30">
+          <div className="flex items-center justify-between p-4 border-b border-[var(--border-color)]" style={{"--border-color":color} as React.CSSProperties }>
             <div className="flex items-center">
               <div className="h-4 w-4 mr-3 mb-5">
-              <Logo/>
+              {pathName.startsWith('/mobile')?<Logo2 />:<Logo />}
               </div>
             </div>
             <Button
@@ -142,18 +149,19 @@ export function ClaudeSidebar({isOpen, setIsOpen }: ClaudeSidebarProps) {
 
           {/* New chat */}
           <div className="px-3  mt-2">
-            <Link href="/" className="flex items-center px-3 py-2 text-sm rounded-md hover:bg-red-950/40 group">
+            <Link href={pathName.startsWith('/mobile')?"/mobile":"/"} className={`flex items-center px-3 py-2 text-sm rounded-md hover:bg-red-950/40 group`}>
                 <img 
-                    src={"/phantom-mascot-logo_71220-38-removebg-preview.png"}
+                    src={imagePath}
                     alt="Title icon" 
                     className="w-8 h-8 mr-2 object-contain"
                 />
-                <span className="font-orbitron text-red-400 text-l">Start New Chat</span>
+                <span className={`font-orbitron text-[${color}] text-l`}>Start New Chat</span>
                 </Link>
             </div>
 
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto py-4">
+           {/*add conditional srollbar color  */}
+          <nav className={`flex-1 overflow-y-auto py-4 ${pathName.startsWith('/mobile')?"scrollbar-purple":"scrollbar-red"} `}>
             <div className="px-3 py-2">
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Recents</h3> 
               <ul className="space-y-1">
@@ -193,7 +201,7 @@ export function ClaudeSidebar({isOpen, setIsOpen }: ClaudeSidebarProps) {
                   className={`relative flex items-center ${chatID === item.chatID ? 'bg-red-950/60' : ''}`}
                 >
                   <Link
-                    href={`/editor/?chat=${item.chatID}&prompt=${encodeURIComponent(item.prompt.trim())}`}
+                    href={`${item.type == "mobile" ? "/mobile/editor/" :"/editor/"}?chat=${item.chatID}&prompt=${encodeURIComponent(item.prompt.trim())}`}  
                     passHref
                     legacyBehavior
                   >
@@ -201,11 +209,11 @@ export function ClaudeSidebar({isOpen, setIsOpen }: ClaudeSidebarProps) {
                       className="flex items-center px-2 py-0.5 text-sm rounded-md hover:bg-red-950/40 group flex-grow"
                       onClick={(e) => {
                         e.preventDefault();
-                        window.location.href = `/editor/?chat=${item.chatID}&prompt=${encodeURIComponent(item.prompt.trim())}`;
+                        window.location.href = `${item.type == "mobile" ? "/mobile/editor/" :"/editor/"}?chat=${item.chatID}&prompt=${encodeURIComponent(item.prompt.trim())}`;
                       }}
                     >
                       <img 
-                        src={"/phantom-mascot-logo_71220-38-removebg-preview.png"}
+                        src={item.type==="mobile"?'/phantom-mobile.png':'/phantom-mascot-logo_71220-38-removebg-preview.png'}
                         alt="Title icon" 
                         className="w-8 h-8 mr-2 object-contain"
                       />
@@ -234,7 +242,7 @@ export function ClaudeSidebar({isOpen, setIsOpen }: ClaudeSidebarProps) {
           {/* Footer */}
           <div className="p-4 border-t border-red-900/30">
             <div className="flex items-center">
-              <div className="h-8 w-8 rounded-full bg-red-700 flex items-center justify-center text-white font-semibold">
+              <div style={{backgroundColor : color==='red'?"#8B0000":color}} className= {`h-8 w-8 rounded-full flex items-center justify-center ${pathName.startsWith('/mobile')?"text-black":"text-white"} font-semibold `}>
                 {currentUser?.displayName?.charAt(0)}
               </div>
               <div className="ml-3">

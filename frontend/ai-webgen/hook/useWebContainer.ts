@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { WebContainer } from '@webcontainer/api';
+import { Terminal } from '@xterm/xterm'
 
 // Singleton instance to track WebContainer
 let globalWebContainerInstance: WebContainer | null = null;
@@ -11,7 +12,10 @@ export function useWebContainer() {
     async function main() {
         // If no promise exists, create one
         if (!webContainerPromise) {
-            webContainerPromise = WebContainer.boot();
+            webContainerPromise = WebContainer.boot({
+                workdirName:"projects",
+                coep:"credentialless"
+            });
         }
 
         try {
@@ -32,6 +36,7 @@ export function useWebContainer() {
     useEffect(() => {
         main();
     }, [])
+    
 
     return webcontainer;
 }

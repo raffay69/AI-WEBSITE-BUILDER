@@ -98,7 +98,13 @@ export default function SignUpForm() {
   };
 
   return (
-    <WavyBackground>
+    <WavyBackground colors={[
+    "#b91c1c", // red-700
+    "#991b1b", // red-800
+    "#7f1d1d", // red-900
+    "#a31d1d", // dark red
+    "#880808", 
+  ]}>
       <div className="p-6">
         <Logo />
       </div>

@@ -7,8 +7,8 @@ export function middleware(req: NextRequest) {
   if (url.startsWith('/signIn') || url.startsWith('/signUp')) {
     res.headers.set('Cross-Origin-Embedder-Policy', 'unsafe-none');
     res.headers.set('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
-  } else if (url.startsWith('/editor')) {
-    res.headers.set('Cross-Origin-Embedder-Policy', 'require-corp');
+  } else if (url.startsWith('/editor')||url.startsWith('/mobile/editor')) {
+    res.headers.set('Cross-Origin-Embedder-Policy', 'credentialless');
     res.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
   }
 
@@ -16,5 +16,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/signIn', '/signUp', '/editor/:path*'],
+  matcher: ['/signIn', '/signUp', '/editor/:path*' , '/mobile/editor/:path*'],
 };

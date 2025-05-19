@@ -2,7 +2,7 @@ import admin from "./firebase.mjs";
 
 const authenticate = async (req, res, next) => {
   const idToken = req.headers.authorization?.split("Bearer ")[1]; 
-  console.log(idToken)
+  // console.log(idToken)
   
   if (!idToken) {
     return res.status(401).json({ message: "Unauthorized: No token provided" });

@@ -16,8 +16,8 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app)
 const db = getFirestore(app);
 
-
-async function addUserContent(userId: any, title: any, content: any , prompt : string , chatID : string) {
+//TODO: add a type field for mobile
+async function addUserContent(userId: any, title: any, content: any , prompt : string , chatID : string , type : string) {
   try {
     const docRef = await addDoc(collection(db, "userContent"), {
       userId: userId,
@@ -25,6 +25,7 @@ async function addUserContent(userId: any, title: any, content: any , prompt : s
       content: content,
       prompt: prompt,
       chatID: chatID,
+      type : type,
       timestamp: new Date()
     });
     console.log("Document written with ID: ", docRef.id);
@@ -48,8 +49,9 @@ async function getUserContent(userId: unknown) {
       id: string;
       title:string;
       prompt: string;
-      chatID: string 
-}[] = [];
+      chatID: string;
+      type : string
+      }[] = [];
     querySnapshot.forEach((doc) => {
       userContent.push({
         id: doc.id,
@@ -57,6 +59,7 @@ async function getUserContent(userId: unknown) {
         timestamp: doc.data().timestamp.toDate(),
         chatID: doc.data().chatID,
         prompt:doc.data().prompt,  
+        type : doc.data().type
       });
     });
     return userContent;

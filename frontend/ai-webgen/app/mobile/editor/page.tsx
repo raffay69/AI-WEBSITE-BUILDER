@@ -6,13 +6,13 @@ import * as React from 'react';
 import { Progress } from '@nextui-org/react';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';  
-import { Logo } from '@/components/logo';
+import { Logo, Logo2 } from '@/components/logo';
 import { Dice1, Download, FullscreenIcon, RefreshCwIcon, Sheet } from 'lucide-react';
 import { DownloadPopup } from '@/components/download-popup';
 import { useWebContainer } from '@/hook/useWebContainer';
 import { SquareTerminal , FolderOpen } from 'lucide-react';
 import { useProjectDownloader } from '@/hook/useProjectDownloader';
-import { useProject } from '../projectContext';
+import { useProject } from '../../projectContext';
 import axios from 'axios';
 import { 
   SandpackProvider, 
@@ -24,32 +24,40 @@ import {
 } from "@codesandbox/sandpack-react";
 import {  levelUp  } from "@codesandbox/sandpack-themes";
 import AuthButtons from '@/components/ui/auth-buttons';
-import { useAuth  } from '../auth/authContext';
+import { useAuth  } from '../../auth/authContext';
 import { toast } from 'sonner';
-import { addUserContent, auth, getContentByIDPrompt, updateContentByChatId } from '../auth/firebase';
+import { addUserContent, auth, getContentByIDPrompt, updateContentByChatId } from '../../auth/firebase';
 import { ClaudeSidebar } from '@/components/ui/sidebar';
 import { mergeProjects, parseProjectString, stringifyProject } from './helper';
+import { WebContainerProcess } from '@webcontainer/api';
+import QRdisplay from '@/components/ui/qrDisplay';
 import '@xterm/xterm/css/xterm.css';
 import { CoolLoader } from '@/components/ui/cool-loader';
+// import { FitAddon } from 'xterm-addon-fit';
+// import { Terminal } from '@xterm/xterm';
+
 let Terminal: any;
 let FitAddon: any;
 
 
 
-function Editor() {
 
-  useEffect(() => {
-      const loadBrowserDependencies = async () => {
-        if (typeof window !== 'undefined') {
-          const xtermModule = await import('@xterm/xterm');
-          Terminal = xtermModule.Terminal;
-          const fitAddonModule = await import('xterm-addon-fit');
-          FitAddon = fitAddonModule.FitAddon;
-        }
-      };
-      loadBrowserDependencies();
-    }, []);
+
+function Editor() {
   
+  useEffect(() => {
+    const loadBrowserDependencies = async () => {
+      if (typeof window !== 'undefined') {
+        const xtermModule = await import('@xterm/xterm');
+        Terminal = xtermModule.Terminal;
+        const fitAddonModule = await import('xterm-addon-fit');
+        FitAddon = fitAddonModule.FitAddon;
+      }
+    };
+    loadBrowserDependencies();
+  }, []);
+
+
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(true);  
   const [showDownloadPopup, setShowDownloadPopup] = useState(false);
@@ -61,8 +69,10 @@ function Editor() {
   const [iframeBackground, setIframeBackground] = useState('transparent');
   const [iframeText, setIframeText] = useState(
     `Click "SHOW PREVIEW" after the code is generated...`
-  );const [iframeLoader , setIframeLoader] = useState<JSX.Element|null>(null);
+  );
+  const [iframeLoader , setIframeLoader] =  useState<JSX.Element | null>(null);
   const [showTerminal, setShowTerminal] = useState(false);
+  // const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
   const terminalRef = useRef<HTMLDivElement>(null);
   const { downloadCurrentProject } = useProjectDownloader();
   const { setDownloadTitle } = useProject();
@@ -78,82 +88,92 @@ function Editor() {
   const [title , setTitle] = useState("untitled")
   const [isSideBarOpen , setIsSideBarOpen] = useState(false)
   const [errors , setErrors] =  useState<string[]>([]);
-  const [inject , setInject] = useState(false)
-  const type = ""
+  // const [inject , setInject] = useState(false)
+  const [currDevProcess , setCurrDevProcess ] = useState<WebContainerProcess | undefined>();
+  const [qrURL , setQrURL] = useState("")
+  const [expoUpgraded , setExpoUpgraded] = useState(false)
+  const type = "mobile"
   const xtermRef = useRef<any | null>(null);
   const fitAddonRef = useRef<any | null>(null);
   const shellInitialized = useRef<boolean>(false);
-  
-   //xterm terminal logic
-    useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!terminalRef.current || !webcontainer || shellInitialized.current) return;
-  
-    xtermRef.current = new Terminal({
-      cursorBlink: false,
-      fontFamily: 'monospace',
-      fontSize: 14,
-      disableStdin: true,
-      theme: {
-        background: '#000000',
-        foreground: '#f8f8f2'
-      }
-    });
-  
-    fitAddonRef.current = new FitAddon();
-    xtermRef.current.loadAddon(fitAddonRef.current);
-    xtermRef.current.open(terminalRef.current);
-  
-    setTimeout(() => fitAddonRef.current?.fit(), 0);
-  
-    const initShell = async () => {
-      try {
-        const shellProcess = await webcontainer.spawn('jsh',{
-          terminal: {
-            cols: xtermRef.current?.cols || 80,
-            rows: xtermRef.current?.rows || 24,
-          },
-        });
-  
-        shellProcess.output.pipeTo(
-          new WritableStream({
-            write(data: string) {
-              xtermRef.current?.write(data);
-            },
-          })
-        );
-  
-        xtermRef.current?.onResize(({ cols, rows } : {cols : number , rows : number}) => {
-          fitAddonRef.current?.fit();
-          shellProcess.resize({ cols, rows });
-        });
-  
-        shellInitialized.current = true;
-      } catch (error) {
-        console.error('Shell initialization failed:', error);
-      }
-    };
-  
-    initShell();
-  
-    const handleResize = () => {
-      if (showTerminal && fitAddonRef.current) {
-        fitAddonRef.current.fit();
-      }
-    };
-  
-    window.addEventListener('resize', handleResize);
-  
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [webcontainer]);
-  
+
+
+  //xterm terminal logic
   useEffect(() => {
-    if (showTerminal && fitAddonRef.current) {
-      setTimeout(() => fitAddonRef.current?.fit(), 0);
+  if (typeof window === 'undefined') return;
+  if (!terminalRef.current || !webcontainer || shellInitialized.current) return;
+
+  xtermRef.current = new Terminal({
+    cursorBlink: false,
+    convertEol: true,
+    scrollback: 3000,
+    fontFamily: 'monospace',
+    fontSize: 14,
+    disableStdin: true,
+    theme: {
+      background: '#000000',
+      foreground: '#f8f8f2'
     }
-  }, [showTerminal]);
+  });
+
+  fitAddonRef.current = new FitAddon();
+  xtermRef.current.loadAddon(fitAddonRef.current);
+  xtermRef.current.open(terminalRef.current);
+
+  setTimeout(() => fitAddonRef.current?.fit(), 0);
+
+  const initShell = async () => {
+    try {
+      const shellProcess = await webcontainer.spawn('jsh',{
+        terminal: {
+          cols: xtermRef.current?.cols || 80,
+          rows: xtermRef.current?.rows || 24,
+        },
+      });
+
+      shellProcess.output.pipeTo(
+        new WritableStream({
+          write(data: string) {
+            xtermRef.current?.write(data);
+          },
+        })
+      );
+
+      xtermRef.current?.onResize(({ cols, rows } : {cols : number , rows : number}) => {
+        fitAddonRef.current?.fit();
+        shellProcess.resize({ cols, rows });
+      });
+
+      shellInitialized.current = true;
+    } catch (error) {
+      console.error('Shell initialization failed:', error);
+    }
+  };
+
+  initShell();
+
+  const handleResize = () => {
+    if (showTerminal && fitAddonRef.current) {
+      fitAddonRef.current.fit();
+    }
+  };
+
+  window.addEventListener('resize', handleResize);
+
+  return () => {
+    window.removeEventListener('resize', handleResize);
+  };
+}, [webcontainer]);
+
+useEffect(() => {
+  if (showTerminal && fitAddonRef.current) {
+    setTimeout(() =>{fitAddonRef.current?.fit();
+     xtermRef.current?.scrollToBottom();
+    },0);
+  }
+}, [showTerminal]);
+
+
 
 
   useEffect(()=>{
@@ -244,7 +264,7 @@ function Editor() {
             Prompt: encodedPrompt.trim(),
           };
           
-          const response = await axios.post('https://ai-webgen-backend.onrender.com/generate', requestData, {
+          const response = await axios.post('https://ai-webgen-backend.onrender.com/generate-mobile', requestData, {
             headers: {
               Authorization: `Bearer ${idToken}`, 
             },
@@ -267,7 +287,6 @@ function Editor() {
             setCompleteCode(combinedContent);
             setPrevRes(combinedContent);
             
-
             await addUserContent(
               currentUser?.uid, 
               projectTitle, 
@@ -295,7 +314,6 @@ function Editor() {
 
   const toggleTerminal = () => setShowTerminal((prev) => !prev);
 
-
   const handleFollowUpSubmit = async () => {
     if(!prompt.trim()){
       return;
@@ -313,7 +331,7 @@ function Editor() {
         try {
         
           const idToken = await getIdToken();
-          const response = await axios.post('https://ai-webgen-backend.onrender.com/modify', requestData ,{
+          const response = await axios.post('https://ai-webgen-backend.onrender.com/modify-mobile', requestData ,{
             headers: {
               Authorization: `Bearer ${idToken}`, 
             }});
@@ -376,7 +394,7 @@ function Editor() {
           try {
           
             const idToken = await getIdToken();
-            const response = await axios.post('https://ai-webgen-backend.onrender.com/modify', requestData ,{
+            const response = await axios.post('https://ai-webgen-backend.onrender.com/modify-mobile', requestData ,{
               headers: {
                 Authorization: `Bearer ${idToken}`, 
               }});
@@ -492,7 +510,6 @@ function Editor() {
         
     const filesToMount = parseContentToFiles(completeCode);
     // console.log(filesToMount)  
-    
     webcontainer?.mount(filesToMount);
     console.log("files mounted")
     
@@ -510,9 +527,7 @@ function Editor() {
 
 
 
-
   
-
   async function main() {
     setIframeBackground('black');
     setIframeText('');
@@ -526,27 +541,131 @@ function Editor() {
         // Log clean output
         console.log(cleanData.trim());
 
+        if (/Metro waiting on/.test(cleanData)) {
+          const match = cleanData.match(/Metro waiting on (exp:\/\/[\w\.-]+\.[\w\.\/\-]+)/);
+            if (match && match[1]) {
+              const url = match[1];
+              console.log("Found QR URL:", url);
+              setQrURL(url);
+            }
+        }
+
         // Check for specific errors
         if (/ReferenceError|Error|TypeError|SyntaxError|warning|failed|failure|exception|invalid|unexpected|cannot|unable|unhandled|rejected|not found|undefined|null|crashed|missing|conflict|fatal|ERR!|error when starting dev server|webpack|module not found|Failed to compile|Cannot find module|Cannot resolve module|Invalid hook call|React Hook|React.createElement|React.Component|Uncaught|ENOENT|EACCES|EPERM|EADDRINUSE|ECONNREFUSED|export .* was not found|import .* from/i.test(cleanData)) {
           // Add error to state
           setErrors(prev => {
             const updatedErrors = [...prev, cleanData.trim()];
-            console.log(`----------------errors---------------------
-                ${updatedErrors}
-                ----------------errors end---------------------`);
+            // console.log(`----------------errors---------------------
+            //     ${updatedErrors}
+            //     ----------------errors end---------------------`);
             return updatedErrors;
         });
         }
     };
 
-    // Await the install process to complete
-    const installProcess = await webcontainer?.spawn('npm', ['install'],{
+
+ await webcontainer?.fs.writeFile('/setup-proxy.js', `
+const https = require('https');
+const url = require('url');
+
+const originalRequest = https.request;
+const originalGet = https.get;
+
+function isExpoApi(requestOptions) {
+  if (typeof requestOptions === 'string') {
+    return requestOptions.includes('api.expo.dev') || requestOptions.includes('exp.host');
+  }
+
+  const hostname = requestOptions.hostname || requestOptions.host || '';
+  return hostname.includes('api.expo.dev') || hostname.includes('exp.host');
+}
+
+function getProxiedOptions(options) {
+  const targetUrl =
+    typeof options === 'string'
+      ? options
+      : \`https://\${options.hostname}\${options.path}\`;
+
+  const proxiedUrl = \`https://cors-proxy-phantom.onrender.com/\${targetUrl}\`;
+  const parsed = url.parse(proxiedUrl);
+
+  return {
+    ...parsed,
+    method: options.method || 'GET',
+    headers: {
+      ...(options.headers || {}),
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+  };
+}
+
+https.request = function (options, callback) {
+  if (isExpoApi(options)) {
+    console.log('[Proxy] Routing to proxy:', options.path || options);
+    return originalRequest(getProxiedOptions(options), callback);
+  }
+  return originalRequest(options, callback);
+};
+
+https.get = function (options, callback) {
+  const req = https.request(options, callback);
+  req.end();
+  return req;
+};
+
+console.log('[Proxy] https.request and https.get patched');
+`);
+
+/*
+------------------------------testing script start----------------------------------- 
+*/
+
+// await webcontainer?.fs.writeFile('/test-fetch.js', `
+//   const https = require('https');
+
+//   https.get('https://exp.host/--/api/v2/versions/latest', res => {
+//     let data = '';
+//     res.on('data', chunk => data += chunk);
+//     res.on('end', () => {
+//       console.log('[Test] Response from Expo API:');
+//       console.log(data);
+//     });
+//   }).on('error', err => {
+//     console.error('[Test] Request error:', err.message);
+//   });
+// `);
+
+
+// const node = await webcontainer?.spawn('node', ['test-fetch.js'], {
+//   env: {
+//     NODE_OPTIONS: '--require ./setup-proxy.js'
+//   }
+// });
+
+// node?.output.pipeTo(new WritableStream({
+//   write(data) {
+//     logOutput(data);
+//   }
+// }));
+
+// await node?.exit;
+
+/*
+------------------------------testing script end----------------------------------- 
+*/
+    console.log(currDevProcess)
+    if(currDevProcess){
+      await currDevProcess.kill()
+    };
+
+  
+    const installProcess = await webcontainer?.spawn('npm', ['install'] ,{
       terminal: {
           cols: xtermRef.current?.cols || 80,
           rows: xtermRef.current?.rows || 24,
         },
     });
-    
+      
     // Pipe install process output
     installProcess?.output.pipeTo(new WritableStream({
       write(data) {
@@ -554,9 +673,66 @@ function Editor() {
         xtermRef.current?.write(data)
       }
     }));
-
-    // Wait for install to complete
     await installProcess?.exit;
+
+    if(!expoUpgraded){
+    setExpoUpgraded(true)
+    console.log("upgrading expo..................")
+    xtermRef.current?.write("Upgrading expo .............")
+    const installExpo = await webcontainer?.spawn('npm',['install' , 'expo-cli@latest'],{
+      terminal: {
+          cols: xtermRef.current?.cols || 80,
+          rows: xtermRef.current?.rows || 24,
+        },
+    })
+    installExpo?.output.pipeTo(new WritableStream({
+      write(data){
+        logOutput(data)
+        xtermRef.current?.write(data)
+      }
+    }))
+
+    await installExpo?.exit
+
+    // ---------------- may come in handy --------------------------
+    const upgrade  = await webcontainer?.spawn('npx', ['expo-cli', 'upgrade', '--non-interactive'],{
+      env:{
+        NODE_OPTIONS: '--require ./setup-proxy.js'
+      },
+      terminal: {
+          cols: xtermRef.current?.cols || 80,
+          rows: xtermRef.current?.rows || 24,
+        },
+    });
+    upgrade?.output.pipeTo(new WritableStream({
+      write(data){
+        logOutput(data)
+        xtermRef.current?.write(data)
+      }
+    }))
+
+    await upgrade?.exit
+
+    // second install just to be safe
+    const installProcess2 = await webcontainer?.spawn('npm', ['install'],{
+      terminal: {
+          cols: xtermRef.current?.cols || 80,
+          rows: xtermRef.current?.rows || 24,
+        },
+    });
+      
+    // Pipe install process output
+    installProcess2?.output.pipeTo(new WritableStream({
+      write(data) {
+        logOutput(data);
+        xtermRef.current?.write(data)
+      }
+    }));
+    await installProcess2?.exit;
+  } else{
+    console.log("expo already upgraded")
+    xtermRef.current?.write("expo already upgraded")
+  }
 
 
     window.addEventListener('message', (event) => {
@@ -564,7 +740,7 @@ function Editor() {
         event.data.type === 'react-error' || 
         event.data.type === 'react-promise-error' ||
         event.data.type === 'react-console-error' ||
-        event.data.type === 'react-module-error'  // Add the new error type
+        event.data.type === 'react-module-error'  
       )) {
         // Store the error
         setErrors(prev => {
@@ -579,43 +755,32 @@ function Editor() {
           }
           
           const updatedErrors = [...prev, errorMessage];
-          console.log(`----------------React App Error---------------------
-              ${errorMessage}
-              ----------------React App Error End---------------------`);
+          // console.log(`----------------React App Error---------------------
+          //     ${errorMessage}
+          //     ----------------React App Error End---------------------`);
           return updatedErrors;
         });
       }
     });
 
-
-    if(!inject){
-    const injected = await injectEnhancedErrorHandling();
-    if (injected) {
-      console.log("Successfully injected error handling");
-      setInject(true)
-    } else {
-      console.log("Could not inject error handling, falling back to console log parsing");
-    }
-  } else if(inject){
-    console.log("already injected")
-  }
-
-
-    // Start dev server
-    const devProcess = await webcontainer?.spawn('npm', ['run', 'dev'],{
+    const devProcess = await webcontainer?.spawn('npm', ['start'],{
+      env: {
+        NODE_OPTIONS: '--require ./setup-proxy.js',
+      },
       terminal: {
           cols: xtermRef.current?.cols || 80,
           rows: xtermRef.current?.rows || 24,
         },
     });
 
+    setCurrDevProcess(devProcess)
     // Pipe dev process output
     devProcess?.output.pipeTo(new WritableStream({
       write(data) {
         logOutput(data);
         xtermRef.current?.write(data)
       }
-    }));
+    })); 
 
 
     // Wait for server to be ready
@@ -625,202 +790,6 @@ function Editor() {
       setUrl(url);
     });
 }
-
-
-
-async function injectEnhancedErrorHandling() {
-  try {
-    // First, try to modify index.html to catch errors early
-    try {
-      const htmlContent = await webcontainer?.fs.readFile('index.html', 'utf-8');
-      
-      // Create our early error handling script
-      const earlyErrorHandlingScript = `
-      <script>
-        // Set up early error handlers before any modules load
-        window.addEventListener('error', function(event) {
-          // Check if this is a script error or module loading error
-          const isModuleError = event.message && (
-            event.message.includes('module') || 
-            event.message.includes('import') || 
-            event.message.includes('export')
-          );
-          
-          window.parent.postMessage({
-            type: isModuleError ? 'react-module-error' : 'react-error',
-            message: event.message,
-            filename: event.filename,
-            lineno: event.lineno,
-            colno: event.colno,
-            stack: event.error?.stack || 'No stack trace available'
-          }, '*');
-          
-          // Log to console for debugging
-          console.error('[Error Tracking]', event.message);
-        });
-        
-        // Track unhandled promise rejections
-        window.addEventListener('unhandledrejection', function(event) {
-          window.parent.postMessage({
-            type: 'react-promise-error',
-            message: event.reason?.message || 'Unhandled Promise Rejection',
-            stack: event.reason?.stack || 'No stack trace available'
-          }, '*');
-        });
-        
-        // Override console.error to capture React errors
-        const originalConsoleError = console.error;
-        console.error = function(...args) {
-          // Call original console.error
-          originalConsoleError.apply(console, args);
-          
-          // Extract message from arguments
-          const errorMsg = args.map(arg => 
-            typeof arg === 'object' && arg !== null ? 
-              (arg instanceof Error ? arg.toString() : JSON.stringify(arg)) 
-              : String(arg)
-          ).join(' ');
-          
-          // Check if this looks like a module error
-          const isModuleError = errorMsg.includes('module') || 
-                               errorMsg.includes('import') || 
-                               errorMsg.includes('export');
-          
-          // Post to parent
-          window.parent.postMessage({
-            type: isModuleError ? 'react-module-error' : 'react-console-error',
-            message: errorMsg
-          }, '*');
-        };
-        
-        // Special handler for syntax errors in modules
-        window.moduleLoadErrors = [];
-        window.captureModuleError = function(error) {
-          window.moduleLoadErrors.push(error);
-          window.parent.postMessage({
-            type: 'react-module-error',
-            message: error.message || 'Module Loading Error',
-            stack: error.stack || 'No stack trace available'
-          }, '*');
-        };
-      </script>
-      `;
-      
-      // Add try-catch wrapper for script tags
-      const scriptTagPattern = /<script\s+type=["']module["']\s+src=["']([^"']+)["']\s*><\/script>/g;
-      let modifiedHtml = htmlContent!.replace(scriptTagPattern, (match, src) => {
-        return `<script type="module">
-          try {
-            import('${src}').catch(error => {
-              window.captureModuleError(error);
-            });
-          } catch (error) {
-            window.captureModuleError(error);
-          }
-        </script>`;
-      });
-      
-      // Inject early error handling script at the beginning of head
-      modifiedHtml = modifiedHtml.replace('<head>', '<head>\n' + earlyErrorHandlingScript);
-      
-      await webcontainer?.fs.writeFile('index.html', modifiedHtml);
-      console.log("Injected enhanced error handling into index.html");
-    } catch (htmlError) {
-      console.error("Error modifying HTML:", htmlError);
-    }
-    
-    // Also inject into the entry file as before
-    const entryFile = `src/main.tsx`;
-    try {
-      console.log(`Also injecting error handling into entry file: ${entryFile}`);
-      const content = await webcontainer?.fs.readFile(entryFile, 'utf-8');
-      
-      // Create enhanced error reporting code for the entry file
-      const errorReportingCode = `
-// Enhanced error reporting code - injected by webcontainer
-// These will catch runtime errors after modules are loaded
-
-// Function to safely stringify objects
-function safeStringify(obj) {
-  try {
-    if (obj instanceof Error) {
-      return obj.message + (obj.stack ? '\\n' + obj.stack : '');
-    }
-    return typeof obj === 'object' && obj !== null ? JSON.stringify(obj) : String(obj);
-  } catch (e) {
-    return 'Error: Unable to stringify object';
-  }
-}
-
-// Error event listener
-window.addEventListener('error', function(event) {
-  const errorInfo = {
-    type: 'react-error',
-    message: event.message,
-    filename: event.filename,
-    lineno: event.lineno,
-    colno: event.colno,
-    stack: event.error?.stack || 'No stack trace available'
-  };
-  
-  console.log('[Error Tracker] Caught error:', errorInfo);
-  window.parent.postMessage(errorInfo, '*');
-});
-
-// Promise rejection handler
-window.addEventListener('unhandledrejection', function(event) {
-  const errorInfo = {
-    type: 'react-promise-error',
-    message: event.reason?.message || 'Unhandled Promise Rejection',
-    stack: event.reason?.stack || 'No stack trace available'
-  };
-  
-  console.log('[Error Tracker] Caught promise rejection:', errorInfo);
-  window.parent.postMessage(errorInfo, '*');
-});
-
-// Console.error override
-const originalConsoleError = console.error;
-console.error = function(...args) {
-  // Call original console.error
-  originalConsoleError.apply(console, args);
-  
-  // Extract message from arguments
-  const errorMsg = args.map(safeStringify).join(' ');
-  
-  // Post to parent
-  window.parent.postMessage({
-    type: 'react-console-error',
-    message: errorMsg
-  }, '*');
-};
-`;
-
-      // Inject at the beginning of the file
-      const modifiedContent = errorReportingCode + '\n\n' + content;
-      
-      // Write back the modified file
-      await webcontainer?.fs.writeFile(entryFile, modifiedContent);
-      console.log(`Successfully injected error handling into ${entryFile}`);
-    }
-    catch(error){
-      console.error(`Entry file ${entryFile} not found or could not be modified:`, error);
-      // Post a specific message about the missing entry point
-      window.parent.postMessage({
-        type: 'react-module-error',
-        message: `Entry file not found: ${entryFile}`
-      }, '*');
-    }
-
-    
-    return true;
-  } catch (error) {
-    console.error("Error injecting enhanced error handlers:", error);
-    return false;
-  }
-}
-
-
 
 function convertToObjects(data: string): { filename: string; content: string }[] {
   // First clean the project name line
@@ -915,34 +884,27 @@ useEffect(() => {
 //----------------------------------------sidebar------------------------------
 
 
-const handleIframeFullscreen = () => {
-  const iframe = document.querySelector("iframe");
-  if (iframe?.requestFullscreen) {
-    iframe.requestFullscreen();
-  }
-};
-
 //array.reduce(callback, initialValue) -> write in notes
 
 
 
   return (
     <div className="min-h-screen flex flex-col">
-    <ClaudeSidebar isOpen={isSideBarOpen} setIsOpen={setIsSideBarOpen} color='red' />
+    <ClaudeSidebar isOpen={isSideBarOpen} setIsOpen={setIsSideBarOpen} color='purple'/>
       <div className="relative w-full">
       <div className="p-6">
-        <Logo />
+        <Logo2 />
       </div>
       <div className="absolute left-1/2 top-8 transform -translate-x-1/2 flex items-center">
         <img 
-          src={"/phantom-mascot-logo_71220-38-removebg-preview.png"}
+          src={"/phantom-mobile.png"}
           alt="Title icon" 
           className="w-8 h-8 mr-2 object-contain"
         />
         <h1 className="text-l font-orbitron">{title}</h1>
       </div>
       <div className="flex justify-center absolute right-5 top-8 ">
-        <AuthButtons color='red'/>
+        <AuthButtons color='#8A2BE2' />
       </div>
       </div>
 
@@ -955,8 +917,8 @@ const handleIframeFullscreen = () => {
               theme={myModifiedTheme}
               files={files}
               options={{
-                activeFile: (files as Record<string, unknown>)["/src/App.tsx"] ? "/src/App.tsx" : "unknown",
-                visibleFiles: ["/src/App.tsx"],
+                activeFile: (files as Record<string, unknown>)["/app/index.tsx"] ? "/app/index.tsx" : "unknown",
+                visibleFiles: ["/app/index.tsx"],
               }}
             >
               <SandpackLayout 
@@ -977,7 +939,7 @@ const handleIframeFullscreen = () => {
                 zIndex:98
               }} 
               size={20}
-              color="red"
+              color="purple"
               onClick={() => {
                 setShowFiles(!showFiles);
                 setIsOpen(!isOpen)
@@ -985,6 +947,7 @@ const handleIframeFullscreen = () => {
               />
               {showFiles && (
                 <SandpackFileExplorer
+                className='mobile'
                 style={{
                   marginLeft:"10px",
                   height:"400px",
@@ -993,7 +956,8 @@ const handleIframeFullscreen = () => {
                 }}
                 />
               )}
-              <SandpackCodeEditor 
+              <SandpackCodeEditor
+              className='mobile' 
               style={{
                 marginLeft:isOpen?"0px":"10px",
                 height:"400px",
@@ -1015,7 +979,7 @@ const handleIframeFullscreen = () => {
                     classNames={{
                       base: "w-full", 
                       track: "bg-gray-700 border-none h-1.5",
-                      indicator: "bg-customRed border-none h-1.5 animate-[progress-indeterminate_1.5s_infinite_linear]",
+                      indicator: "bg-[#8A2BE2] border-none h-1.5 animate-[progress-indeterminate_1.5s_infinite_linear]",
                     }}
                   />
                 </div>
@@ -1032,7 +996,7 @@ const handleIframeFullscreen = () => {
             />
             <button
               onClick={handleFollowUpSubmit}
-              className="w-full bg-customRed text-stone-400 hover:text-white py-2 rounded-lg hover:bg-customRed1 transition-colors font-orbitron text-lg font-normal"
+              className="w-full bg-[#8A2BE2] text-black hover:text-black py-2 rounded-lg hover:opacity-80 transition-colors font-orbitron text-lg font-bold"
             >
               Submit Follow-up
             </button>
@@ -1044,20 +1008,20 @@ const handleIframeFullscreen = () => {
           <span>PREVIEW</span>
               <button
                 onClick={main}
-                className="text-customRed hover:text-customRed1">
+                className="text-[#8A2BE2] hover:text-[#A64DFF]">
                 Show Preview
               </button>
             </div>
             <div className="flex items-center space-x-4">
-            <button
+            {/* <button
             className="text-gray-400 hover:text-white"
             title='FullScreen'
             onClick={handleIframeFullscreen}
             >
             <FullscreenIcon />
-          </button>
+          </button> */}
+          <QRdisplay appUrl={qrURL}/>
             <button
-            // onClick={toggleTerminal}
             className="text-gray-400 hover:text-white"
             title='Terminal'
             onClick={toggleTerminal}
@@ -1087,29 +1051,32 @@ const handleIframeFullscreen = () => {
             </div>
           </div>
             {!url && (<div className="absolute inset-0 flex items-center justify-center"style={{ zIndex: 10 }}>
-              <p className="text-black mb-2 font-orbitron"> {iframeLoader} </p>
+              <p className="text-black mb-2 font-orbitron"> {iframeLoader} </p> 
               </div>)}
+              
             <iframe
               src={url}
               className="w-full h-full rounded-lg border-gray-800 scrollbar-thin scrollbar-thumb-red-600 scrollbar-track-black"
               title="Preview"
               style={{
                         backgroundColor: iframeBackground,
-                        zIndex:url?20:5, // Ensures iframe is on top
+                        zIndex:url?20:5, 
                         position: 'relative',
                }} 
                 />
-                 <div
+                
+                  <div
                     ref={terminalRef}
-                    className={`absolute inset-0 bg-black pt-2 z-[9998]  scrollbar-thin  
+                    className={`absolute inset-0 bg-black pt-2 z-[9998]  scrollbar-thin-mobile  
                       ${showTerminal ? 'block' : 'hidden'}`}
                     style={{ pointerEvents: 'auto' }}
                   >
                   </div>
+                
         {/* error display */}
         {errors.length > 0 && (
           <div 
-            className="absolute bottom-36 inset-0 flex  items-end justify-center z-[10000] pointer-events-none"
+            className="absolute bottom-36 inset-0 flex  items-end justify-center z-[9999] pointer-events-none"
             style={{ padding: '0 1rem 1rem 1rem' }}
           >
             <div 
@@ -1124,8 +1091,11 @@ const handleIframeFullscreen = () => {
               onClick={handleErrorsSubmit} 
               className="text-white hover:text-white bg-black hover:bg-black/60 rounded px-3 py-1 text-sm font-orbitron transition-colors border border-red-700"
             >
-              Fix with <span className="inline-block font-orbitron text-sm font-bold text-red-600 tracking-wider">
-              &nbsp; PHANTOM
+              Fix with <span className="inline-block font-orbitron text-sm font-bold text-[#8A2BE2] tracking-wider">
+               PHANTOM
+              </span>
+              <span className="font-orbitron text-xs text-[#B98DF0] ml-1 self-end mb-1">
+                mobile
               </span>
             </button>
             <button 
@@ -1168,3 +1138,4 @@ export default function EditorPage() {
     </React.Suspense>
   );
 }
+

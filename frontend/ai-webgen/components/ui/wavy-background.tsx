@@ -61,21 +61,15 @@ export const WavyBackground = ({
     render();
   };
 
-  // Changed to red shades
-  const waveColors = colors ?? [
-    "#b91c1c", // red-700
-    "#991b1b", // red-800
-    "#7f1d1d", // red-900
-    "#a31d1d", // dark red
-    "#880808", 
-  ];
+
+ const waveColors = colors 
   
   const drawWave = (n: number) => {
     nt += getSpeed();
     for (i = 0; i < n; i++) {
       ctx.beginPath();
       ctx.lineWidth = waveWidth || 50;
-      ctx.strokeStyle = waveColors[i % waveColors.length];
+      ctx.strokeStyle = waveColors![i % waveColors!.length];
       for (x = 0; x < w; x += 5) {
         var y = noise(x / 800, 0.3 * i, nt) * 100;
         ctx.lineTo(x, y + h * 0.5); // adjust for height, currently at 50% of the container
