@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,28 +23,31 @@ export default function SignUpForm() {
   const { userLoggedIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false); 
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [underVerification , setUnderVerification] = useState(false)
 
   const router = useRouter()
 
-  useEffect(() => {
-      if (userLoggedIn) {
-        toast(
-          <span className="glitch font-orbitron" data-text="🔴 ACCESS GRANTED 🔴">
-             ACCESS GRANTED 
-          </span>,
-          {
-            style: {
-              background: "#001100", // Dark green background
-              color: "#00ff00", // Neon green text
-              border: "1px solid #00ff00", // Neon green border
-              textShadow: "0 0 5px #00ff00, 0 0 10px #00ff55", // Glowing green effect
-            },
-          }
-        );
-        router.push('/');
-      }
-    }, [userLoggedIn,router]);
+  // useEffect(() => {
+  //     if (userLoggedIn) {
+  //       toast(
+  //         <span className="glitch font-orbitron" data-text="🔴 ACCESS GRANTED 🔴">
+  //            ACCESS GRANTED 
+  //         </span>,
+  //         {
+  //           style: {
+  //             background: "#001100", // Dark green background
+  //             color: "#00ff00", // Neon green text
+  //             border: "1px solid #00ff00", // Neon green border
+  //             textShadow: "0 0 5px #00ff00, 0 0 10px #00ff55", // Glowing green effect
+  //           },
+  //         }
+  //       );
+  //       router.push('/');
+  //     }
+  //   }, [userLoggedIn,router]);
 
+
+    
 
 
     const togglePasswordVisibility = () => {
@@ -84,6 +87,7 @@ export default function SignUpForm() {
       setIsRegistering(true);
       try {
         await doCreateUserWithEmailAndPassword(email, password, displayName);
+        setUnderVerification(true)
       } catch (err) {
         // Handle the error properly
         if (err instanceof Error) {
@@ -108,6 +112,7 @@ export default function SignUpForm() {
       <div className="p-6">
         <Logo />
       </div>
+      {!underVerification ? 
       <div className="max-w-md w-full mt-15 mx-auto rounded-none md:rounded-2xl p-4 md:p-8 shadow-input bg-white dark:bg-black/90">
         <h2 className="font-bold text-xl text-neutral-800 dark:text-neutral-200">
           Join{" "}
@@ -189,7 +194,45 @@ export default function SignUpForm() {
             </Link>
           </p>
         </form>
-      </div>
+      </div> :
+      <div className="max-w-md w-full mt-15 mx-auto rounded-none md:rounded-2xl p-4 md:p-8 shadow-input bg-white dark:bg-black/90">
+        <div className="text-center">
+          {/* Email Icon */}
+          <div className="mx-auto w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mb-6">
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+
+          <h2 className="font-bold text-xl text-neutral-800 dark:text-neutral-200 mb-2">
+            Verify Your Email
+          </h2>
+          
+          <div className="mb-6">
+            <p className="text-neutral-600 text-sm dark:text-neutral-300 mb-3">
+              A verification email has been sent to
+            </p>
+            <p className="text-red-600 font-orbitron font-medium text-sm mb-4">
+              {email}
+            </p>
+            <p className="text-neutral-600 text-sm dark:text-neutral-300 mb-2">
+              Please click the verification link in the email to activate your account.
+            </p>
+            <p className="text-neutral-600 text-xs dark:text-neutral-400">
+              After verification, you can sign in to your account.
+            </p>
+          </div>
+
+          {/* Go to Sign In Button */}
+          <Link href="/signIn">
+            <button className="relative group bg-black hover:!bg-red-600 hover:!text-black font-orbitron dark:bg-zinc-800 w-full text-white rounded-md h-10 font-medium shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] dark:shadow-[0px_1px_0px_0px_var(--zinc-800)_inset,0px_-1px_0px_0px_var(--zinc-800)_inset] mb-4">
+              Go to Sign In
+            </button>
+          </Link>
+        </div>
+      </div> 
+       }
+      
     </WavyBackground>
   );
 }

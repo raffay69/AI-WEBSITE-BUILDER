@@ -97,12 +97,12 @@ export default function SignInForm() {
         setIsSigningIn(true)
         try{
         await doSignInWithEmailAndPassword(email, password)
-        // doSendEmailVerification()
         } catch(err){
           if(err instanceof Error){
           setError(err.message)
-          setIsSigningIn(false)
           }
+        } finally{
+          setIsSigningIn(false)
         }
     }
 }

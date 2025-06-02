@@ -41,9 +41,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
       try {
-        if (user) {
+        if (user && user.emailVerified) {
           setCurrentUser(user);
           setUserLoggedIn(true);
+          
           
           // Use proper provider comparison
           const isEmail = user.providerData.some(

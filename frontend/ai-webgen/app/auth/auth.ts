@@ -6,33 +6,46 @@ import {
   GoogleAuthProvider,
   UserCredential,
   updateProfile,
-  GithubAuthProvider
+  GithubAuthProvider,
+  sendEmailVerification,
+  signOut
 } from "firebase/auth";
 
 
 export const doCreateUserWithEmailAndPassword = async (
   email: string,
   password: string,
-  displayName: string // Add displayName as an argument
+  displayName: string 
 ) => {
   try {
     // Create the user with email and password
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-
-    // Update the user's profile with the displayName
+    await signOut(auth)
     const user = userCredential.user;
+    await sendEmailVerification(user)
     await updateProfile(user, {
       displayName: displayName,
     });
-    return userCredential;
   } catch (error) {
     throw error;
   }
 };
 
+
 export const doSignInWithEmailAndPassword = async (email: string, password: string) => {
   try {
-    return await signInWithEmailAndPassword(auth, email, password);
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user
+
+    await user.reload()
+
+    if(user.emailVerified){
+      return userCredential
+    } else{
+      await auth.signOut()
+      await sendEmailVerification(user)
+      throw new Error('Your account has not been verified. A verification link has been sent to your registered email. Please verify your email and sign in again.')
+    }
   } catch (error) {
     console.error("Email sign-in error:", error);
     throw error;
