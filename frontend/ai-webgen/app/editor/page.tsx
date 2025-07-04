@@ -1617,9 +1617,11 @@ export default function EditorPage() {
   return (
     <React.Suspense
       fallback={
-        <span className="cursor-pointer inline-flex justify-center items-center hover:opacity-80 transition-opacity font-orbitron text-2xl font-bold relative right-5 bottom-4 text-red-600 tracking-wider">
-          PHANTOM
-        </span>
+        <div className="flex justify-center items-center">
+          <span className="cursor-pointer inline-block hover:opacity-80 transition-opacity font-orbitron text-2xl font-bold relative right-5 bottom-4 text-red-600 tracking-wider">
+            PHANTOM
+          </span>
+        </div>
       }
     >
       <Editor />
