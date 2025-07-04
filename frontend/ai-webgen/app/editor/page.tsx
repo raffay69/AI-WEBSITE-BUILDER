@@ -179,6 +179,7 @@ function Editor() {
   const redeploy = async () => {
     const chatID = searchParams.get("chat");
     const encodedPrompt = searchParams.get("prompt");
+    const idToken = await getIdToken();
     try {
       setDeployStatus(false);
       setIsDeploying(true);
@@ -214,7 +215,7 @@ function Editor() {
 
       const result = await getHostURLAndHostingID(
         currentUser?.uid,
-        encodedPrompt?.trim()!,
+        encodedPrompt!.trim(),
         chatID!
       );
 
@@ -222,7 +223,12 @@ function Editor() {
       formData.append("file", blob);
       const res = await axios.post(
         "https://ai-webgen-backend.onrender.com/site/update",
-        formData
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        }
       );
       console.log(res.data);
 
@@ -244,6 +250,7 @@ function Editor() {
   const removeHosting = async () => {
     const chatID = searchParams.get("chat");
     const encodedPrompt = searchParams.get("prompt");
+    const idToken = await getIdToken();
 
     if (!currentUser?.uid || !chatID || !encodedPrompt) {
       console.error("Missing required params");
@@ -269,6 +276,11 @@ function Editor() {
         "https://ai-webgen-backend.onrender.com/site/delete",
         {
           hostingID: res.hostingID,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
         }
       );
 
@@ -293,6 +305,7 @@ function Editor() {
   const handleClick = async () => {
     const chatID = searchParams.get("chat");
     const encodedPrompt = searchParams.get("prompt");
+    const idToken = await getIdToken();
     try {
       setIsDeploying(true);
 
@@ -328,7 +341,12 @@ function Editor() {
       formData.append("file", blob);
       const res = await axios.post(
         "https://ai-webgen-backend.onrender.com/site/deploy",
-        formData
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        }
       );
       console.log(res.data);
 

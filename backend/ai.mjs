@@ -322,61 +322,71 @@ async function modifyContent(modReq, previousResponse) {
 
 //<---------------------------------Hosting ENDPOINTS -------------------------------------------->
 
-app.post("/site/deploy", upload.single("file"), async (req, res) => {
-  try {
-    const blob = req.file.buffer;
-    const { title } = req.body;
+app.post(
+  "/site/deploy",
+  upload.single("file"),
+  authenticate,
+  async (req, res) => {
+    try {
+      const blob = req.file.buffer;
+      const { title } = req.body;
 
-    const createSite = await axios.post(
-      "https://api.netlify.com/api/v1/sites",
-      { name: `Phantom-${title}` },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.NETLIFY_PAT}`,
-        },
-      }
-    );
+      const createSite = await axios.post(
+        "https://api.netlify.com/api/v1/sites",
+        { name: `Phantom-${title}` },
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.NETLIFY_PAT}`,
+          },
+        }
+      );
 
-    const result = await axios.put(
-      `https://api.netlify.com/api/v1/sites/${createSite.data.id}`,
-      blob,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.NETLIFY_PAT}`,
-          "Content-Type": "application/zip",
-        },
-      }
-    );
-    res.json({ ...result.data });
-  } catch (error) {
-    console.log("Deploy error:", error);
-    res.status(500).json({ error: "Deployment failed" });
+      const result = await axios.put(
+        `https://api.netlify.com/api/v1/sites/${createSite.data.id}`,
+        blob,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.NETLIFY_PAT}`,
+            "Content-Type": "application/zip",
+          },
+        }
+      );
+      res.json({ ...result.data });
+    } catch (error) {
+      console.log("Deploy error:", error);
+      res.status(500).json({ error: "Deployment failed" });
+    }
   }
-});
+);
 
-app.post("/site/update", upload.single("file"), async (req, res) => {
-  try {
-    const blob = req.file.buffer;
-    const { hostingID } = req.body;
+app.post(
+  "/site/update",
+  upload.single("file"),
+  authenticate,
+  async (req, res) => {
+    try {
+      const blob = req.file.buffer;
+      const { hostingID } = req.body;
 
-    const result = await axios.put(
-      `https://api.netlify.com/api/v1/sites/${hostingID}`,
-      blob,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.NETLIFY_PAT}`,
-          "Content-Type": "application/zip",
-        },
-      }
-    );
-    res.json({ ...result.data });
-  } catch (error) {
-    console.log("Update error:", error);
-    res.status(500).json({ error: "Update failed" });
+      const result = await axios.put(
+        `https://api.netlify.com/api/v1/sites/${hostingID}`,
+        blob,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.NETLIFY_PAT}`,
+            "Content-Type": "application/zip",
+          },
+        }
+      );
+      res.json({ ...result.data });
+    } catch (error) {
+      console.log("Update error:", error);
+      res.status(500).json({ error: "Update failed" });
+    }
   }
-});
+);
 
-app.post("/site/delete", async (req, res) => {
+app.post("/site/delete", authenticate, async (req, res) => {
   try {
     const { hostingID } = req.body;
 
