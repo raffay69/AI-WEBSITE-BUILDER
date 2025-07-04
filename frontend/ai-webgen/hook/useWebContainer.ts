@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { WebContainer } from '@webcontainer/api';
-import { Terminal } from '@xterm/xterm'
 
 // Singleton instance to track WebContainer
 let globalWebContainerInstance: WebContainer | null = null;

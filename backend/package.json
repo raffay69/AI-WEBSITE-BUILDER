@@ -13,11 +13,12 @@
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
     "@webcontainer/api": "^1.5.1-internal.2",
-    "axios": "^1.7.9",
+    "axios": "^1.10.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "firebase-admin": "^13.2.0",
+    "multer": "^2.0.1",
     "openai": "^4.87.3",
     "prompt-sync": "^4.2.0"
   }
