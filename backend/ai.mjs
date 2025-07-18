@@ -99,7 +99,7 @@ app.post("/generate", authenticate, async (req, res) => {
 
 async function generateContent(genReq) {
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash-preview-04-17",
+    model: "gemini-2.5-flash",
     systemInstruction: sysPrompt,
     generationConfig: {
       responseMimeType: "application/json",
@@ -203,7 +203,7 @@ app.post("/modify", authenticate, async (req, res) => {
 
 async function modifyContent(modReq, previousResponse) {
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash-preview-04-17",
+    model: "gemini-2.5-flash",
     systemInstruction: sysPrompt,
     generationConfig: {
       responseMimeType: "application/json",
@@ -437,7 +437,7 @@ app.post("/generate-mobile", authenticate, async (req, res) => {
 
 async function generateContentMobile(genReq) {
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash-preview-04-17",
+    model: "gemini-2.5-flash",
     systemInstruction: sysPromptMobile,
     generationConfig: {
       responseMimeType: "application/json",
@@ -529,7 +529,7 @@ app.post("/modify-mobile", authenticate, async (req, res) => {
 
 async function modifyContentMobile(modReq, previousResponse) {
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash-preview-04-17",
+    model: "gemini-2.5-flash",
     systemInstruction: sysPromptMobile,
     generationConfig: {
       responseMimeType: "application/json",
