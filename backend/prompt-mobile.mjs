@@ -602,11 +602,14 @@ Essential implementation guidelines:
 
 Follow these patterns exactly to ensure your app works correctly on all platforms.`;
 
+export const mobileEnriching5 = `At the bottom of the mobile app's main screen or in the app's settings/about section, add a small “Created using PHANTOM” badge or text label.
+This should include a tappable link to "https://phantom-ai-raffay.vercel.app/".
+The design should match the app's overall theme (colors, fonts, spacing) and be styled to look native and minimal, without disrupting the user interface.`;
 
-// chalra toh sahi phone me bhi aara 
+// chalra toh sahi phone me bhi aara
 // works with these webconatiner commands
-// npm install 
+// npm install
 // npm install expo-cli@latest
 // npx expo-cli upgrade --non-interactive
-// npm install 
-// npm start 
+// npm install
+// npm start

@@ -9,6 +9,7 @@ import {
   mobileEnriching2,
   mobileEnriching3,
   mobileEnriching4,
+  mobileEnriching5,
   sysPromptMobile,
 } from "./prompt-mobile.mjs";
 import {
@@ -21,6 +22,7 @@ import {
   webEnriching6,
   webEnriching7,
   webEnriching8,
+  webEnriching9,
 } from "./prompt.mjs";
 import multer from "multer";
 import axios from "axios";
@@ -137,6 +139,9 @@ async function generateContent(genReq) {
             text: webEnriching8,
           },
           {
+            text: webEnriching9,
+          },
+          {
             text: genReq, //user prompt
           },
         ],
@@ -239,6 +244,9 @@ async function modifyContent(modReq, previousResponse) {
           },
           {
             text: webEnriching8,
+          },
+          {
+            text: webEnriching9,
           },
           {
             text: `Here's the current project state:\n${previousResponse}\n\nYour task: ${modReq} !!!!!ULTRA IMPORTANT -> do not change the projectName , give new prompt using the same projectName!!!!!!
@@ -463,6 +471,9 @@ async function generateContentMobile(genReq) {
             text: mobileEnriching4,
           },
           {
+            text: mobileEnriching5,
+          },
+          {
             text: genReq, //user prompt
           },
         ],
@@ -553,6 +564,9 @@ async function modifyContentMobile(modReq, previousResponse) {
           },
           {
             text: mobileEnriching4,
+          },
+          {
+            text: mobileEnriching5,
           },
           {
             text: `Here's the current project state:\n${previousResponse}\n\nYour task: ${modReq} !!!!!ULTRA IMPORTANT -> do not change the projectName , give new prompt using the same projectName!!!!!!
