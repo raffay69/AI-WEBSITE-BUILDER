@@ -54,8 +54,17 @@ const {userLoggedIn ,currentUser} = useAuth()
     >
       <main className="flex-1 flex flex-col h-screen">
         {userLoggedIn && <ClaudeSidebar isOpen={isSideBarOpen} setIsOpen={setIsSideBarOpen} color='#8A2BE2'/>}
-        <div className="p-6 ">      
+        <div className="flex justify-between p-6 ">  {/* remove flex justify-between next month */}       
           <Logo2/>
+          {/* remove next month */}
+          <Button
+              color='#8A2BE2'
+              borderRadius="1.75rem"
+              className="bg-black p-4 dark:bg-black text-black dark:text-white border-neutral-200 dark:border-slate-800">
+              🙏 Our servers are down due to usage limits. Service will resume at the start of next month
+          </Button>
+          <div className='w-[200px]' ></div>
+          {/* remove next month */}
         </div>
         <div className="flex justify-center absolute right-5 top-8 ">
           <AuthButtons color='#8A2BE2' />
