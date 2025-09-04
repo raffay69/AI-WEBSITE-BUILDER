@@ -318,9 +318,13 @@ function Editor() {
             setCode("No valid data received from the backend.");
           }
         }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast("Failed to fetch data from the backend.");
+      } catch (error: any) {
+        console.error("Error fetching data:", error.response.data.error);
+        if (error.response.data.error === "Quota exceeded") {
+          toast("LLM Quota exceeded , Please try again later");
+        } else {
+          toast("Failed to fetch data from the backend.");
+        }
         setCode("Failed to fetch data from the backend.");
       } finally {
         setIsLoading(false);
@@ -400,9 +404,13 @@ function Editor() {
         } else {
           setCode("No valid data received from the backend.");
         }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast("Failed to fetch data from the backend.");
+      } catch (error: any) {
+        console.error("Error fetching data:", error.response.data.error);
+        if (error.response.data.error === "Quota exceeded") {
+          toast("LLM Quota exceeded , Please try again later");
+        } else {
+          toast("Failed to fetch data from the backend.");
+        }
         setCode("Failed to fetch data from the backend.");
       } finally {
         setIsLoading(false);
@@ -484,9 +492,13 @@ function Editor() {
         } else {
           setCode("No valid data received from the backend.");
         }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast("Failed to fetch data from the backend.");
+      } catch (error: any) {
+        console.error("Error fetching data:", error.response.data.error);
+        if (error.response.data.error === "Quota exceeded") {
+          toast("LLM Quota exceeded , Please try again later");
+        } else {
+          toast("Failed to fetch data from the backend.");
+        }
         setCode("Failed to fetch data from the backend.");
       } finally {
         setIsLoading(false);

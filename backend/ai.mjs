@@ -94,100 +94,113 @@ app.post("/generate", authenticate, async (req, res) => {
     res.json({ forFrontend });
   } catch (error) {
     if (!res.headersSent) {
-      res.status(500).send({ error: "Error generating content" });
+      if (error.message === "Quota exceeded") {
+        res.status(500).send({ error: "Quota exceeded" });
+      } else {
+        res.status(500).send({ error: "Error generating content" });
+      }
     }
   }
 });
 
 async function generateContent(genReq) {
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
-    systemInstruction: sysPrompt,
-    generationConfig: {
-      responseMimeType: "application/json",
-      responseSchema: schema,
-    },
-  });
-
-  const prompt = {
-    contents: [
-      {
-        role: "user",
-        parts: [
-          {
-            text: webEnriching1,
-          },
-          {
-            text: webEnriching2,
-          },
-          {
-            text: webEnriching3,
-          },
-          {
-            text: webEnriching4,
-          },
-          {
-            text: webEnriching5,
-          },
-          {
-            text: webEnriching6,
-          },
-          {
-            text: webEnriching7,
-          },
-          {
-            text: webEnriching8,
-          },
-          {
-            text: webEnriching9,
-          },
-          {
-            text: genReq, //user prompt
-          },
-        ],
-      },
-    ],
-  };
-
-  const result = await model.generateContent(prompt);
-  console.log(result.response.text());
-
-  let data = result.response.text();
-  let projectData;
   try {
-    projectData = JSON.parse(data);
-  } catch (error) {
-    console.error("Error parsing the AI response:", error);
-  }
-
-  if (!projectData || !Array.isArray(projectData.actions)) {
-    console.error("Invalid project structure:", projectData);
-  }
-
-  // Log file names and their content, and handle commands
-  const logActions = () => {
-    const result = [];
-    // Add project name
-    if (projectData?.projectName) {
-      result.push({ projectName: projectData.projectName });
-    }
-
-    // Add file actions
-    projectData.actions.forEach((action) => {
-      if (action.type === "file") {
-        result.push({
-          fileName: action.filePath,
-          content: action.content,
-        });
-      } else if (action.type === "shell") {
-        result.push({ command: action.command });
-      }
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      systemInstruction: sysPrompt,
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: schema,
+      },
     });
 
-    return result;
-  };
+    const prompt = {
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: webEnriching1,
+            },
+            {
+              text: webEnriching2,
+            },
+            {
+              text: webEnriching3,
+            },
+            {
+              text: webEnriching4,
+            },
+            {
+              text: webEnriching5,
+            },
+            {
+              text: webEnriching6,
+            },
+            {
+              text: webEnriching7,
+            },
+            {
+              text: webEnriching8,
+            },
+            {
+              text: webEnriching9,
+            },
+            {
+              text: genReq, //user prompt
+            },
+          ],
+        },
+      ],
+    };
 
-  return logActions();
+    const result = await model.generateContent(prompt);
+    console.log(result.response.text());
+
+    let data = result.response.text();
+    let projectData;
+    try {
+      projectData = JSON.parse(data);
+    } catch (error) {
+      console.error("Error parsing the AI response:", error);
+    }
+
+    if (!projectData || !Array.isArray(projectData.actions)) {
+      console.error("Invalid project structure:", projectData);
+    }
+
+    // Log file names and their content, and handle commands
+    const logActions = () => {
+      const result = [];
+      // Add project name
+      if (projectData?.projectName) {
+        result.push({ projectName: projectData.projectName });
+      }
+
+      // Add file actions
+      projectData.actions.forEach((action) => {
+        if (action.type === "file") {
+          result.push({
+            fileName: action.filePath,
+            content: action.content,
+          });
+        } else if (action.type === "shell") {
+          result.push({ command: action.command });
+        }
+      });
+
+      return result;
+    };
+
+    return logActions();
+  } catch (e) {
+    if (e.message.includes("exceeded your current quota")) {
+      console.log("quota exceeded");
+      throw new Error("Quota exceeded");
+    }
+    console.log(e.message);
+    throw new Error("Error occured");
+  }
 }
 
 app.post("/modify", authenticate, async (req, res) => {
@@ -201,55 +214,60 @@ app.post("/modify", authenticate, async (req, res) => {
     res.json({ modifyFrontend });
   } catch (error) {
     if (!res.headersSent) {
-      res.status(500).send({ error: "Error generating content" });
+      if (error.message === "Quota exceeded") {
+        res.status(500).send({ error: "Quota exceeded" });
+      } else {
+        res.status(500).send({ error: "Error generating content" });
+      }
     }
   }
 });
 
 async function modifyContent(modReq, previousResponse) {
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
-    systemInstruction: sysPrompt,
-    generationConfig: {
-      responseMimeType: "application/json",
-      responseSchema: schema,
-    },
-  });
+  try {
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      systemInstruction: sysPrompt,
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: schema,
+      },
+    });
 
-  const prompt = {
-    contents: [
-      {
-        role: "user",
-        parts: [
-          {
-            text: webEnriching1,
-          },
-          {
-            text: webEnriching2,
-          },
-          {
-            text: webEnriching3,
-          },
-          {
-            text: webEnriching4,
-          },
-          {
-            text: webEnriching5,
-          },
-          {
-            text: webEnriching6,
-          },
-          {
-            text: webEnriching7,
-          },
-          {
-            text: webEnriching8,
-          },
-          {
-            text: webEnriching9,
-          },
-          {
-            text: `Here's the current project state:\n${previousResponse}\n\nYour task: ${modReq} !!!!!ULTRA IMPORTANT -> do not change the projectName , give new prompt using the same projectName!!!!!!
+    const prompt = {
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: webEnriching1,
+            },
+            {
+              text: webEnriching2,
+            },
+            {
+              text: webEnriching3,
+            },
+            {
+              text: webEnriching4,
+            },
+            {
+              text: webEnriching5,
+            },
+            {
+              text: webEnriching6,
+            },
+            {
+              text: webEnriching7,
+            },
+            {
+              text: webEnriching8,
+            },
+            {
+              text: webEnriching9,
+            },
+            {
+              text: `Here's the current project state:\n${previousResponse}\n\nYour task: ${modReq} !!!!!ULTRA IMPORTANT -> do not change the projectName , give new prompt using the same projectName!!!!!!
             !!!<ULTRA IMPORTANT> -> after making the appropriate changes give all the files except these
             - **eslint.config.js**
             - **package-lock.json**
@@ -261,71 +279,79 @@ async function modifyContent(modReq, previousResponse) {
             - **vite.config.ts** 
             !!!!! give these files only if they were modifed , if not modified then dont give them in the response!!!!!!!
              </ULTRA IMPORTANT> !!!!!!!!!!!!!`,
-          },
-        ],
-      },
-    ],
-  };
+            },
+          ],
+        },
+      ],
+    };
 
-  const result = await model.generateContentStream(prompt);
+    const result = await model.generateContentStream(prompt);
 
-  // Print text as it comes in.
-  let fullResponse = "";
-  for await (const chunk of result.stream) {
-    const chunkText = chunk.text();
-    fullResponse += chunkText;
-    process.stdout.write(chunkText);
-  }
-  let cleanedResponse = fullResponse
-    .replace(/```json/g, "") // Remove opening code block identifiers
-    .replace(/```/g, "") // Remove closing backticks for code block
-    .trim(); // Trim any leading/trailing spaces
-
-  // Remove leading and trailing backticks from the 'content' field
-  cleanedResponse = cleanedResponse.replace(
-    /"content":\s*`(.*?)`/g,
-    (match, content) => {
-      return `"content": ${JSON.stringify(content.trim())}`;
+    // Print text as it comes in.
+    let fullResponse = "";
+    for await (const chunk of result.stream) {
+      const chunkText = chunk.text();
+      fullResponse += chunkText;
+      process.stdout.write(chunkText);
     }
-  );
+    let cleanedResponse = fullResponse
+      .replace(/```json/g, "") // Remove opening code block identifiers
+      .replace(/```/g, "") // Remove closing backticks for code block
+      .trim(); // Trim any leading/trailing spaces
 
-  // Clean up the string to remove control characters (like newlines, tabs, etc.)
-  cleanedResponse = cleanedResponse.replace(/[\x00-\x1F\x7F]/g, ""); // Remove control characters
-  let projectData;
-  try {
-    projectData = JSON.parse(cleanedResponse);
-  } catch (error) {
-    console.error("Error parsing the AI response:", error);
-  }
-
-  if (!projectData || !Array.isArray(projectData.actions)) {
-    console.error("Invalid project structure:", projectData);
-  }
-
-  // Log file names and their content, and handle commands
-  const logActions = () => {
-    const result = [];
-    // Add project name
-    if (projectData?.projectName) {
-      result.push({ projectName: projectData.projectName });
-    }
-
-    // Add file actions
-    projectData.actions.forEach((action) => {
-      if (action.type === "file") {
-        result.push({
-          fileName: action.filePath,
-          content: action.content,
-        });
-      } else if (action.type === "shell") {
-        result.push({ command: action.command });
+    // Remove leading and trailing backticks from the 'content' field
+    cleanedResponse = cleanedResponse.replace(
+      /"content":\s*`(.*?)`/g,
+      (match, content) => {
+        return `"content": ${JSON.stringify(content.trim())}`;
       }
-    });
+    );
 
-    return result;
-  };
+    // Clean up the string to remove control characters (like newlines, tabs, etc.)
+    cleanedResponse = cleanedResponse.replace(/[\x00-\x1F\x7F]/g, ""); // Remove control characters
+    let projectData;
+    try {
+      projectData = JSON.parse(cleanedResponse);
+    } catch (error) {
+      console.error("Error parsing the AI response:", error);
+    }
 
-  return logActions();
+    if (!projectData || !Array.isArray(projectData.actions)) {
+      console.error("Invalid project structure:", projectData);
+    }
+
+    // Log file names and their content, and handle commands
+    const logActions = () => {
+      const result = [];
+      // Add project name
+      if (projectData?.projectName) {
+        result.push({ projectName: projectData.projectName });
+      }
+
+      // Add file actions
+      projectData.actions.forEach((action) => {
+        if (action.type === "file") {
+          result.push({
+            fileName: action.filePath,
+            content: action.content,
+          });
+        } else if (action.type === "shell") {
+          result.push({ command: action.command });
+        }
+      });
+
+      return result;
+    };
+
+    return logActions();
+  } catch (e) {
+    if (e.message.includes("exceeded your current quota")) {
+      console.log("quota exceeded");
+      throw new Error("Quota exceeded");
+    }
+    console.log(e.message);
+    throw new Error("Error occured");
+  }
 }
 
 //<---------------------------------Hosting ENDPOINTS -------------------------------------------->
@@ -438,88 +464,101 @@ app.post("/generate-mobile", authenticate, async (req, res) => {
     res.json({ forFrontend });
   } catch (error) {
     if (!res.headersSent) {
-      res.status(500).send({ error: "Error generating content" });
+      if (error.message === "Quota exceeded") {
+        res.status(500).send({ error: "Quota exceeded" });
+      } else {
+        res.status(500).send({ error: "Error generating content" });
+      }
     }
   }
 });
 
 async function generateContentMobile(genReq) {
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
-    systemInstruction: sysPromptMobile,
-    generationConfig: {
-      responseMimeType: "application/json",
-      responseSchema: schema,
-    },
-  });
-
-  const prompt = {
-    contents: [
-      {
-        role: "user",
-        parts: [
-          {
-            text: mobileEnriching1,
-          },
-          {
-            text: mobileEnriching2,
-          },
-          {
-            text: mobileEnriching3,
-          },
-          {
-            text: mobileEnriching4,
-          },
-          {
-            text: mobileEnriching5,
-          },
-          {
-            text: genReq, //user prompt
-          },
-        ],
-      },
-    ],
-  };
-
-  const result = await model.generateContent(prompt);
-  console.log(result.response.text());
-
-  let data = result.response.text();
-  let projectData;
   try {
-    projectData = JSON.parse(data);
-  } catch (error) {
-    console.error("Error parsing the AI response:", error);
-  }
-
-  if (!projectData || !Array.isArray(projectData.actions)) {
-    console.error("Invalid project structure:", projectData);
-  }
-
-  // Log file names and their content, and handle commands
-  const logActions = () => {
-    const result = [];
-    // Add project name
-    if (projectData?.projectName) {
-      result.push({ projectName: projectData.projectName });
-    }
-
-    // Add file actions
-    projectData.actions.forEach((action) => {
-      if (action.type === "file") {
-        result.push({
-          fileName: action.filePath,
-          content: action.content,
-        });
-      } else if (action.type === "shell") {
-        result.push({ command: action.command });
-      }
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      systemInstruction: sysPromptMobile,
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: schema,
+      },
     });
 
-    return result;
-  };
+    const prompt = {
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: mobileEnriching1,
+            },
+            {
+              text: mobileEnriching2,
+            },
+            {
+              text: mobileEnriching3,
+            },
+            {
+              text: mobileEnriching4,
+            },
+            {
+              text: mobileEnriching5,
+            },
+            {
+              text: genReq, //user prompt
+            },
+          ],
+        },
+      ],
+    };
 
-  return logActions();
+    const result = await model.generateContent(prompt);
+    console.log(result.response.text());
+
+    let data = result.response.text();
+    let projectData;
+    try {
+      projectData = JSON.parse(data);
+    } catch (error) {
+      console.error("Error parsing the AI response:", error);
+    }
+
+    if (!projectData || !Array.isArray(projectData.actions)) {
+      console.error("Invalid project structure:", projectData);
+    }
+
+    // Log file names and their content, and handle commands
+    const logActions = () => {
+      const result = [];
+      // Add project name
+      if (projectData?.projectName) {
+        result.push({ projectName: projectData.projectName });
+      }
+
+      // Add file actions
+      projectData.actions.forEach((action) => {
+        if (action.type === "file") {
+          result.push({
+            fileName: action.filePath,
+            content: action.content,
+          });
+        } else if (action.type === "shell") {
+          result.push({ command: action.command });
+        }
+      });
+
+      return result;
+    };
+
+    return logActions();
+  } catch (e) {
+    if (e.message.includes("exceeded your current quota")) {
+      console.log("quota exceeded");
+      throw new Error("Quota exceeded");
+    }
+    console.log(e.message);
+    throw new Error("Error occured");
+  }
 }
 
 app.post("/modify-mobile", authenticate, async (req, res) => {
@@ -533,43 +572,48 @@ app.post("/modify-mobile", authenticate, async (req, res) => {
     res.json({ modifyFrontend });
   } catch (error) {
     if (!res.headersSent) {
-      res.status(500).send({ error: "Error generating content" });
+      if (error.message === "Quota exceeded") {
+        res.status(500).send({ error: "Quota exceeded" });
+      } else {
+        res.status(500).send({ error: "Error generating content" });
+      }
     }
   }
 });
 
 async function modifyContentMobile(modReq, previousResponse) {
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
-    systemInstruction: sysPromptMobile,
-    generationConfig: {
-      responseMimeType: "application/json",
-      responseSchema: schema,
-    },
-  });
+  try {
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      systemInstruction: sysPromptMobile,
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: schema,
+      },
+    });
 
-  const prompt = {
-    contents: [
-      {
-        role: "user",
-        parts: [
-          {
-            text: mobileEnriching1,
-          },
-          {
-            text: mobileEnriching2,
-          },
-          {
-            text: mobileEnriching3,
-          },
-          {
-            text: mobileEnriching4,
-          },
-          {
-            text: mobileEnriching5,
-          },
-          {
-            text: `Here's the current project state:\n${previousResponse}\n\nYour task: ${modReq} !!!!!ULTRA IMPORTANT -> do not change the projectName , give new prompt using the same projectName!!!!!!
+    const prompt = {
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: mobileEnriching1,
+            },
+            {
+              text: mobileEnriching2,
+            },
+            {
+              text: mobileEnriching3,
+            },
+            {
+              text: mobileEnriching4,
+            },
+            {
+              text: mobileEnriching5,
+            },
+            {
+              text: `Here's the current project state:\n${previousResponse}\n\nYour task: ${modReq} !!!!!ULTRA IMPORTANT -> do not change the projectName , give new prompt using the same projectName!!!!!!
             !!!<ULTRA IMPORTANT> -> after making the appropriate changes give all the files except these
             - **package-lock.json**
             - **babel.config.js**
@@ -577,69 +621,77 @@ async function modifyContentMobile(modReq, previousResponse) {
             - **tsconfig.json**
             !!!!! give these files only if they were modifed , if not modified then dont give them in the response!!!!!!!
              </ULTRA IMPORTANT> !!!!!!!!!!!!!`,
-          },
-        ],
-      },
-    ],
-  };
+            },
+          ],
+        },
+      ],
+    };
 
-  const result = await model.generateContentStream(prompt);
+    const result = await model.generateContentStream(prompt);
 
-  // Print text as it comes in.
-  let fullResponse = "";
-  for await (const chunk of result.stream) {
-    const chunkText = chunk.text();
-    fullResponse += chunkText;
-    process.stdout.write(chunkText);
-  }
-  let cleanedResponse = fullResponse
-    .replace(/```json/g, "") // Remove opening code block identifiers
-    .replace(/```/g, "") // Remove closing backticks for code block
-    .trim(); // Trim any leading/trailing spaces
-
-  // Remove leading and trailing backticks from the 'content' field
-  cleanedResponse = cleanedResponse.replace(
-    /"content":\s*`(.*?)`/g,
-    (match, content) => {
-      return `"content": ${JSON.stringify(content.trim())}`;
+    // Print text as it comes in.
+    let fullResponse = "";
+    for await (const chunk of result.stream) {
+      const chunkText = chunk.text();
+      fullResponse += chunkText;
+      process.stdout.write(chunkText);
     }
-  );
+    let cleanedResponse = fullResponse
+      .replace(/```json/g, "") // Remove opening code block identifiers
+      .replace(/```/g, "") // Remove closing backticks for code block
+      .trim(); // Trim any leading/trailing spaces
 
-  // Clean up the string to remove control characters (like newlines, tabs, etc.)
-  cleanedResponse = cleanedResponse.replace(/[\x00-\x1F\x7F]/g, ""); // Remove control characters
-  let projectData;
-  try {
-    projectData = JSON.parse(cleanedResponse);
-  } catch (error) {
-    console.error("Error parsing the AI response:", error);
-  }
-
-  if (!projectData || !Array.isArray(projectData.actions)) {
-    console.error("Invalid project structure:", projectData);
-  }
-
-  // Log file names and their content, and handle commands
-  const logActions = () => {
-    const result = [];
-    // Add project name
-    if (projectData?.projectName) {
-      result.push({ projectName: projectData.projectName });
-    }
-
-    // Add file actions
-    projectData.actions.forEach((action) => {
-      if (action.type === "file") {
-        result.push({
-          fileName: action.filePath,
-          content: action.content,
-        });
-      } else if (action.type === "shell") {
-        result.push({ command: action.command });
+    // Remove leading and trailing backticks from the 'content' field
+    cleanedResponse = cleanedResponse.replace(
+      /"content":\s*`(.*?)`/g,
+      (match, content) => {
+        return `"content": ${JSON.stringify(content.trim())}`;
       }
-    });
+    );
 
-    return result;
-  };
+    // Clean up the string to remove control characters (like newlines, tabs, etc.)
+    cleanedResponse = cleanedResponse.replace(/[\x00-\x1F\x7F]/g, ""); // Remove control characters
+    let projectData;
+    try {
+      projectData = JSON.parse(cleanedResponse);
+    } catch (error) {
+      console.error("Error parsing the AI response:", error);
+    }
 
-  return logActions();
+    if (!projectData || !Array.isArray(projectData.actions)) {
+      console.error("Invalid project structure:", projectData);
+    }
+
+    // Log file names and their content, and handle commands
+    const logActions = () => {
+      const result = [];
+      // Add project name
+      if (projectData?.projectName) {
+        result.push({ projectName: projectData.projectName });
+      }
+
+      // Add file actions
+      projectData.actions.forEach((action) => {
+        if (action.type === "file") {
+          result.push({
+            fileName: action.filePath,
+            content: action.content,
+          });
+        } else if (action.type === "shell") {
+          result.push({ command: action.command });
+        }
+      });
+
+      return result;
+    };
+
+    return logActions();
+  } catch (e) {
+    if (e.message.includes("exceeded your current quota")) {
+      console.log("quota exceeded");
+      throw new Error("Quota exceeded");
+    }
+    console.log(e.message);
+    throw new Error("Error occured");
+  }
 }
